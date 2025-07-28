@@ -1,0 +1,3193 @@
+
+--- Page 1 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+Available online 25 February 2025
+0951-8320/© 2025 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+Contents lists available at ScienceDirect
+Reliability Engineering and System Safety
+journal homepage: www.elsevier.com/locate/ress
+Deep learning-stochastic ensemble for RUL prediction and predictive
+maintenance with dynamic mission abort policies
+Faizanbasha A. a,b
+,∗, U. Rizwan a
+a Department of Mathematics, Islamiah College, New Town, Vaniyambadi, 635752, Tamil Nadu, India
+b Thiruvalluvar University, Serkkadu, Vellore, 632115, Tamil Nadu, India
+A R T I C L E
+I N F O
+Keywords:
+Predictive maintenance
+Prognostics and health management
+Smooth semi-martingale
+Degradation modeling
+Remaining useful life
+A B S T R A C T
+Accurate prediction of Remaining Useful Life (RUL) is crucial for optimizing maintenance strategies in
+industrial systems. However, existing models often falter under nonlinear and nonstationary degradation
+conditions with stochastic and abrupt failures, limiting their real-world effectiveness. To address this, we
+introduce a novel approach that combines advanced deep learning architectures with stochastic modeling and
+dynamic optimization techniques for more precise RUL prediction. This study has three overarching aims: First,
+to propose a hybrid ensemble model integrating convolutional neural networks, transformers, long short-term
+memory networks, and a smooth semi-martingale stochastic layer, a combination not previously explored, to
+effectively model both deterministic and stochastic degradation processes, thereby enhancing RUL prediction
+accuracy. Second, to introduce a reinforcement learning-based hyperparameter tuning method that dynamically
+adjusts model parameters, improving performance and reducing training time, which in turn optimizes the
+ensemble model’s predictive capabilities. Third, to integrate the refined RUL predictions and time-varying
+thresholds into a multi-stage optimization framework for mission cycle assignment and resource management.
+This facilitates real-time decision-making and the development of a dynamic mission abort policy, including
+mission shifting, re-engagement, post-abortion analysis, mission plan adjustments, and maintenance scheduling.
+Together, these innovations enhance RUL prediction accuracy, model adaptability, and operational efficiency,
+ensuring reliable and cost-effective maintenance strategies in mission-critical systems. The proposed model,
+validated using NASA’s C-MAPSS dataset, demonstrated superior RUL prediction accuracy over state-of-the-art
+methods, with sensitivity analyses and ablation studies confirming its stability and effectiveness.
+1. Introduction
+Prognostics and Health Management (PHM) plays a pivotal role
+in predicting the future condition of industrial equipment. It enables
+timely Predictive Maintenance (PdM) decisions to reduce downtime
+and improve reliability [1]. Among the various metrics in PHM, Re-
+maining Useful Life (RUL) estimation provides a clear and quantifiable
+measure of the time left before system failure. This makes it essential
+for industrial applications [2]. In today’s globally competitive indus-
+trial sectors, organizations are under constant pressure to maximize
+asset availability, reduce operational risks, and minimize costs [3]. At
+the same time, maintaining safety and regulatory standards are also
+equally important. Accurate RUL predictions serve as key indicators for
+scheduling maintenance activities, optimizing resources, and minimiz-
+ing unplanned failures. This, in turn, improves operational reliability
+and safety [4,5]. Advances in deep convolutional neural networks and
+∗Corresponding author at: Department of Mathematics, Islamiah College, New Town, Vaniyambadi, 635752, Tamil Nadu, India.
+E-mail address: faizan_phdmaths@islamiahcollege.edu.in (Faizanbasha A.).
+LSTMs have shown great potential in enhancing the accuracy of data-
+driven RUL predictions. This is especially true for complex systems
+where expert models are not yet available [6].
+While extensive research has focused on improving the accuracy
+of data-driven RUL predictions using deep learning methods such as
+CNNs and LSTMs, several key gaps still remain [7]. Firstly, existing
+models often fail to account for the stochastic nature of machine
+degradation, especially under nonlinear and nonstationary operational
+conditions found in complex industrial systems. Secondly, they struggle
+to handle abrupt failures and unpredictable shifts in degradation pat-
+terns, which are common in real-world applications. Thirdly, there is a
+lack of integration between advanced deep learning architectures and
+stochastic modeling techniques for RUL prediction. Lastly, current PdM
+strategies rarely incorporate dynamic mission abort policies necessary
+for real-time decision-making in mission-critical operations.
+https://doi.org/10.1016/j.ress.2025.110919
+Received 5 October 2024; Received in revised form 12 February 2025; Accepted 14 February 2025
+
+--- Page 2 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+2
+Faizanbasha A. and U. Rizwan
+Nomenclature
+Acronyms & Abbreviations
+RUL
+Remaining Useful Life
+PdM
+Predictive Maintenance
+CNN
+Convolutional Neural Network
+LSTM
+Long Short-Term Memory network
+SSM
+Smooth Semi-Martingale
+RLHT
+Reinforcement Learning-Based
+Hyperparameter Tuning
+MDP
+Markov Decision Process
+RMSE
+Root Mean Squared Error
+ReLU
+Rectified Linear Unit
+TCN
+Temporal Convolutional Network
+C-MAPSS
+Commercial Modular Aero-Propulsion
+System Simulation
+PHM
+Prognostics and Health Management
+DQN
+Deep Q-Network
+AGCNN
+Attention-Gated Convolutional Neural
+Network
+Bi-LSTM
+Bidirectional Long Short-Term Memory
+network
+BiGRU
+Bidirectional Gated Recurrent Unit
+S-score
+Scoring function for RUL prediction
+RNN
+Recurrent Neural Network
+GRU
+Gated Recurrent Unit
+Notations
+𝐗
+Raw sensor data
+𝐗cnn
+Output of CNN layer
+𝑓CNN
+CNN function
+𝐅𝑖,𝑗
+Feature map in CNN
+𝐖
+Filter weights in CNN
+𝑏
+Bias term
+𝐀𝑖,𝑗
+Activation map after ReLU
+𝐗trans
+Output of Transformer layer
+𝑓trans
+Transformer function
+𝐐, 𝐊, 𝐕
+Query, Key, Value matrices in Transformer
+𝑑𝑘
+Dimensionality of keys and queries
+Attention(𝐐, 𝐊, 𝐕)
+Attention function
+𝐗lstm
+Output of LSTM
+𝑓LSTM
+LSTM function
+𝐛𝑖, 𝐛𝑓, 𝐛𝑜, 𝐛𝑐
+Bias terms in LSTM
+⊙
+Element-wise multiplication
+𝑡
+State of the system at time 𝑡in SSM model
+𝑔(𝑠, 𝑠)
+Nonlinear degradation rate function
+𝜎(𝑠, 𝑠)
+Volatility function
+𝑊𝑠
+Standard Brownian motion
+𝛾(𝑠, 𝑠−, 𝑧)
+Jump amplitude function
+̃𝑁(𝑑 𝑠, 𝑑 𝑧)
+Compensated Poisson random measure
+𝑀𝑡
+Martingale component
+𝜃
+Hyperparameters of the model
+𝐿(𝜃)
+Loss function
+𝑆𝑡
+State in MDP
+𝐴𝑡
+Action in MDP
+𝑅𝑡
+Reward function
+𝑃(𝑆𝑡+1|𝑆𝑡, 𝐴𝑡)
+Transition probability in MDP
+𝜋(𝑆𝑡)
+Policy in MDP
+𝜌
+Discount factor
+𝑉∗(𝑆𝑡)
+Optimal value function
+𝑄(𝑆𝑡, 𝐴𝑡)
+Action-value function
+𝛼
+Learning rate
+𝑦𝑖
+Target value in DQN
+(𝜃)
+Loss function in DQN
+𝜁
+Failure threshold
+RUL𝑡
+Remaining useful life at time 𝑡
+𝜏𝑡
+Dynamic threshold in mission abort policy
+𝛿
+Decay factor
+𝛥RUL𝑡
+Rate of change of RUL
+𝑎𝑡
+Alert threshold
+𝐴𝑗
+Current aircraft
+𝐴𝑘
+Potential replacement aircraft
+𝐶shift
+Cost of shifting the mission
+𝐶cont(𝑡)
+Cost of continuing the mission
+𝑡
+Health state of an engine at time 𝑡
+𝑟(𝑠)
+Recovery rate
+𝜁re
+Threshold for re-engagement
+𝐶re(𝑡)
+Re-engagement cost function
+𝐶maint
+Maintenance cost
+𝐶fail(𝑡)
+Expected failure cost
+𝑡opt
+Optimal re-engagement time
+𝐶missed(𝑡)
+Cost of lost mission opportunities
+𝑈(𝐴𝑘)
+Utility function for aircraft 𝐴𝑘
+𝑃fail(𝐴𝑘, 𝑡)
+Probability of failure
+𝛿spare
+Threshold for shifting to spare role
+𝐵shift(𝑡)
+Expected benefit of re-shifting
+𝑆re(𝑡)
+Success probability if re-shifted
+𝑆cont(𝑡)
+Success probability if continued
+𝛿shift
+Threshold for re-shifting decision
+𝐶total(𝑡)
+Total expected cost
+𝜇
+Mean of a distribution (e.g., in data
+normalization)
+𝜎𝑆 𝐷
+Standard deviation of a distribution
+𝜖
+Risk tolerance
+𝑇
+Time horizon
+Error𝑖
+Prediction error for sample 𝑖
+To address these gaps, this study proposes a CNN-Transformer-
+LSTM-SSM ensemble framework designed to capture both deterministic
+and stochastic degradation processes. Deterministic degradation refers
+to predictable, gradual wear over time, while stochastic degradation
+involves random, unpredictable failures or sudden shifts in machinery
+condition [8]. By effectively modeling both types of degradation, our
+framework leads to more precise RUL predictions and mission-critical
+decision-making. The proposed stochastic layer within the ensemble
+model is based on the Smooth Semi-Martingale (SSM) framework. It
+captures both gradual wear and sudden degradation shifts [9]. This
+allows the model to handle unpredictable jumps and falls in degrada-
+tion processes that traditional and recent deep learning methods often
+overlook. This approach stabilizes the model performance and results in
+reduced error during RUL predictions. It enables for more reliable PdM
+scheduling and reduces the risk of unexpected equipment failures.
+A smooth semi-martingale is a special type of stochastic process
+that effectively models systems exhibiting both predictable trends and
+random fluctuations [9]. It combines deterministic elements, such as
+gradual wear, with stochastic components like sudden shocks or fail-
+ures [8,10]. In the context of our study, machinery degradation is
+complex and involves both steady wear and abrupt failures due to
+unforeseen factors. By including an SSM layer in our deep learning
+ensemble model, we enhance its ability to accurately reflect the com-
+plex nature of equipment degradation. This integration improves the
+model’s performance in handling nonlinear and nonstationary degra-
+dation patterns, leading to more precise RUL predictions and better
+maintenance decisions.
+1.1. Background and related works
+Recent advancements have integrated the data-driven probabilistic
+RUL prognostics into the maintenance scheduling. This has demon-
+strated significant reductions in unscheduled maintenance events and
+
+--- Page 3 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+3
+Faizanbasha A. and U. Rizwan
+overall maintenance costs for aircraft systems. It shows the potential of
+deep learning and Monte Carlo-based approaches to improve predictive
+accuracy and decision-making [11]. The integration of AI-driven PHM
+systems further enhances predictive capabilities. By utilizing a com-
+bined approach of ‘‘model-driven’’ and ‘‘data-driven’’ methods, these
+systems can detect anomalies and predict RUL in complex engineering
+systems. This shows great promise in reducing unexpected failures
+and optimizing maintenance strategies [12]. Additionally, integrating
+multiple data sources within Industrial IoT (IIoT)-enabled systems can
+further refine the RUL predictions, improving accuracy and providing
+more informed decision-making in industrial applications [13].
+Dynamic PdM approaches that use probabilistic deep learning mod-
+els has further improved the accuracy and efficiency of RUL prog-
+nostics [14,15]. This is particularly true for multi-component sys-
+tems, allowing for more precise maintenance scheduling under uncer-
+tainty [16]. Recent advancements in ‘‘deep learning’’ methods, such as
+attention-based ‘‘temporal convolutional networks,’’ have significantly
+improved the accuracy of RUL prediction by efficiently handling large-
+scale industrial IoT data [17]. Furthermore, the prediction of RUL has
+advanced through the development of deep learning techniques like the
+Multicellular LSTM (MGLSTM). This model effectively processes multi-
+source data for enhanced prediction accuracy in aerospace applications.
+It has demonstrated superior performance compared to traditional
+machine learning techniques [18].
+In recent years, there has been significant advancement in PdM and
+RUL prediction using deep learning techniques. For instance, ‘‘bidirec-
+tional gated recurrent units’’ combined with ‘‘temporal self-attention’’
+mechanisms have been proposed to improve the prediction accuracy of
+RUL in various industrial systems [19,20]. Approaches incorporating
+‘‘multi-head dual sparse self-attention’’ networks [21], spatial–temporal
+attention-based LSTMs [22], ‘‘dual-aspect self-attention’’ based on
+Transformers [23], and Temporal Convolutional Networks (TCN) with
+attention mechanisms have shown improved prognostic performance.
+This is particularly evident in machinery systems [24,25]. Transformer
+based architectures have also been utilized by integrating trend aug-
+mentation and temporal features with multi-sensor data for RUL pre-
+diction [26]. ‘‘Bayesian gated-Transformer’’ models have been de-
+veloped for ‘‘risk-aware’’ prediction of aero-engine RUL [27]. Addi-
+tionally, aircraft engine RUL estimation via ‘‘double attention-based
+data-driven architectures’’ has been explored recently [28]. Moreover,
+improved Transformer models using feature fusion gates and predictive
+vector angle minimization have been proposed for aircraft engine
+RUL prediction, achieving higher accuracy and advanced prediction
+capabilities [29].
+Other studies have focused on dynamic predictive maintenance
+scheduling using deep learning ensembles [30–32]. Additionally, data-
+driven approaches combined with sensor-based monitoring have been
+explored [33]. Hybrid CNN-LSTM models have also been developed
+for optimizing maintenance and production processes [34]. Recently,
+advanced techniques such as Bayesian-optimized LSTM for lithium-ion
+battery health prognostics [35] and soft-thresholding attention-based
+TCN for machinery prognostics [24] have been extensively studied.
+Further, multi-objective predictive maintenance scheduling models that
+integrate RUL estimations into maintenance decisions have also demon-
+strated significant improvements in maintenance completion time and
+cost reductions [36]. Lightweight models, such as dual attention LSTMs
+based on exponential smoothing, have also been proposed for RUL
+prediction [37]. Dual-task TCN models with multi-channel attention
+have also been developed to improve RUL predictions and identify the
+first failure time in complex systems [25]. These developments show
+the growing importance of integrating deep learning into prognostics
+to enhance PdM strategies.
+Moreover, recent studies have optimized maintenance processes
+by integrating burn-in, predictive maintenance, and smooth semi-
+martingale models, effectively reducing downtime and costs while
+enhancing reliability in manufacturing systems [10]. This demonstrates
+the effectiveness of combining stochastic processes with PdM strategies,
+supporting our ensemble framework that incorporates an SSM layer for
+both deterministic and stochastic degradation.
+Based on our review of the literature, we hypothesize that integrat-
+ing CNNs, Transformers, LSTMs, and an SSM stochastic layer into an
+ensemble model can effectively capture both deterministic and stochas-
+tic degradation processes. This integrated approach aims to address
+the limitations of existing methods by handling unpredictable shifts in
+degradation patterns and accounting for the inherent randomness in
+machine degradation. By doing so, we expect to enhance the accuracy
+and stability of RUL predictions, leading to more reliable predictive
+maintenance strategies in industrial applications.
+Mission abort policies are critical in preventing catastrophic failures
+and ensuring mission success, especially in safety-critical operations
+with uncertain conditions. Furthermore, recent advancements have
+significantly enhanced the development of dynamic mission abort poli-
+cies to improve system reliability and safety. Optimal two-stage abort
+policies have been proposed to balance mission progress with risk
+mitigation in performance-based missions [38]. Strategies addressing
+multi-component system failures with interactive failure modes have
+been developed to enhance system survivability [39]. Joint model-
+ing approaches that integrate loading and mission abort decisions in
+dynamic environments have also been explored to optimize system
+performance under varying conditions [40]. Additionally, policies op-
+timizing component activation and mission aborting in multi-attempt
+missions have demonstrated reductions in expected mission losses [41].
+Time-varying and self-adaptive mission aborting policies have been
+introduced to handle resource constraints and uncertain shock envi-
+ronments effectively [42,43]. Reliability modeling for balanced systems
+considering mission abort policies has further advanced the under-
+standing of mission success probabilities and system survivability [44].
+Moreover, joint optimization of mission abort strategies with system
+structures has been investigated to address dynamic tasks and enhance
+mission reliability [45]. Additionally, optimal condition-based abort
+decisions have been formulated to minimize expected total costs by
+integrating degradation processes with abort policies [46]. These stud-
+ies collectively contribute to the robust framework for mission abort
+policies, ensuring enhanced safety and reliability in diverse operational
+scenarios.
+1.2. Research gap and motivation
+Despite the growing adoption of deep learning models in PdM,
+accurately predicting the RUL under real-world conditions remains
+a significant challenge [16]. Models like CNNs and LSTM networks
+capture the spatial and temporal patterns. However, they often fail
+to account for the stochastic and nonstationary nature of machine
+degradation, leading to less reliable RUL predictions [47]. Addition-
+ally, traditional hyperparameter tuning methods, such as grid search,
+Bayesian optimization, or manual adjustment, are inefficient and may
+not yield optimal model performance. There is also a gap in connect-
+ing RUL predictions with actionable maintenance strategies, such as
+dynamic mission abort policies that can make real-time operational
+decisions based on the predicted RUL.
+According to a systematic literature review, existing predictive
+maintenance models often lack integration of stochastic processes and
+dynamic mission abort policies, limiting their ability to accurately
+predict RUL under nonlinear and nonstationary degradation. Nonlinear
+degradation refers to the irregular, unpredictable wear of machinery
+components influenced by factors like load, temperature, or operational
+stress. Nonstationary degradation implies that the statistical properties
+of the degradation process changes over the time, challenging models
+that assume consistent wear patterns. In real-world scenarios, such
+degradation can lead to sudden, unforeseen failures, causing critical
+downtime and safety risks. These complex degradation behaviors ne-
+cessitate advanced methodologies capable of adapting to changing
+
+--- Page 4 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+4
+Faizanbasha A. and U. Rizwan
+Fig. 1. The proposed framework for RUL prediction, pdm, mission cycle assignment, and dynamic mission abort policies.
+conditions. Further, the existing methods often lack reliable uncer-
+tainty quantification, a critical aspect in RUL prediction. For instance,
+a Gaussian process-based framework with active learning has been
+proposed to address this, but computational inefficiencies still remain
+a challenge [48].
+To address these challenges, we propose a CNN-Transformer-LSTM-
+SSM ensemble framework that integrates a stochastic process layer
+based on the SSM model. This addition enables the model to capture
+both gradual wear and sudden failures, enhancing performance across
+varying operational conditions. The SSM layer is particularly effective
+in capturing unpredictable jumps and random shifts in degradation pat-
+terns, the aspects that traditional deep learning models often overlook.
+Additionally, we propose a new Reinforcement Learning-Based Hyper-
+parameter Tuning (RLHT) method to dynamically adjust key model
+parameters to further enhance performance and reduce the training
+time. The proposed approach was validated on the ‘‘NASA C-MAPSS’’
+dataset [49]. The results demonstrate better performance in RUL pre-
+diction when compared to the recent and traditional ‘‘state-of-the-art’’
+methods. Additionally, based on the predicted RUL, we propose a novel
+mission abort policy that uses dynamic, time-dependent thresholds, fa-
+cilitating real-time decision-making during mission-critical operations.
+This policy includes strategies for mission shifting, re-engagement, and
+post-abortion analysis to ensure operational continuity. To the best
+of our knowledge, this study is the first to propose such a hybrid
+framework that introduces an SSM layer within deep learning models.
+This addition captures both deterministic and random degradation
+processes, enhancing prediction stability and accuracy. Further, the
+relationships between the core components of our proposed framework
+are illustrated in Fig. 1. The framework integrates RUL prediction,
+PdM, mission cycle assignment, and dynamic mission abort policies.
+Specifically, RUL predictions from the deep learning layer inform pre-
+dictive maintenance decisions, optimize mission assignments to im-
+prove efficiency, and enable real-time mission abort decisions based on
+operational conditions and system health.
+1.3. Main contributions
+The main contributions of this study are:
+1. Proposing a Novel Hybrid Ensemble Model. We introduce a hy-
+brid CNN-Transformer-LSTM-SSM ensemble model that com-
+bines CNNs for spatial feature extraction, Transformers for cap-
+turing ‘‘long-range temporal dependencies,’’ LSTM networks for
+sequential modeling, and an SSM stochastic layer for handling
+stochastic degradation processes. This enhances the accuracy of
+RUL predictions in complex, nonlinear industrial systems.
+2. Developing an SSM-Based Stochastic Layer. We develop a stochas-
+tic layer using the SSM model to capture both continuous wear
+and abrupt failure dynamics, addressing limitations of previous
+deep learning models and improving predictive accuracy under
+varying operational conditions.
+3. Introducing Reinforcement Learning-Based Hyperparameter Tuning.
+We propose a reinforcement learning-based hyperparameter tun-
+ing method that dynamically adjusts key parameters during
+training, enhancing model accuracy and reducing training time
+compared to traditional methods.
+4. Optimizing Mission Cycles Assignment and Resource Management.
+We integrate RUL predictions into a multi-stage optimization
+framework, enabling dynamic engine allocation, mission plan
+adjustments, and maintenance scheduling to minimize costs and
+mitigate failure risks under complex operational constraints.
+5. Implementing a Dynamic Mission Abort Policy. We introduce a ‘‘dy-
+namic mission abort policy’’ based on time-varying thresholds to
+allow real-time mission adjustments. We also develop strategies
+for mission shifting, re-engagement, and post-abortion analysis
+to effectively manage mission-critical operations.
+The remainder of this paper is organized as follows. Section 2
+outlines the methodology of the proposed CNN-Transformer-LSTM-
+SSM ensemble framework. In Section 3, we present the framework
+for predictive maintenance scheduling and mission cycle optimization
+based on the proposed ensemble model. Section 4 introduces a dynamic
+mission abortion policy informed by the predicted RUL, while Section 5
+presents an analysis of post-mission abortion and aircraft shifting,
+focusing on maintenance and optimization considerations. Section 6
+provides the experimental analysis, showcasing validation results using
+the NASA C-MAPSS dataset. Finally, Section 7 concludes the paper with
+a summary of our findings and suggestions for future research.
+
+--- Page 5 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+5
+Faizanbasha A. and U. Rizwan
+2. Methodology
+In this section, we explain the methodologies that integrates CNNs,
+Transformers, LSTM networks, and the smooth semi-martingale model
+to predict failures and estimate RUL in industrial systems. This ap-
+proach uses the strengths of deep learning and stochastic modeling
+to process complex sensor data and predicts machinery degradation
+dynamics.
+2.1. Convolutional neural networks for spatial feature extraction
+In the proposed framework, Convolutional Neural Networks (CNNs)
+are employed to extract informative spatial patterns from the prepro-
+cessed sensor data. Initially, the raw sensor signals 𝐗are normalized
+and segmented into fixed-size windows, 𝐗segment, ensuring that each
+segment captures localized operational states of the machinery.
+The CNN processes these segments through stacked convolutional
+layers, each applying a set of learnable filters to identify spatial cor-
+relations associated with machine health. For each filter 𝐖, a feature
+map 𝐅is generated:
+𝐅𝑖,𝑗=
+𝑀
+∑
+𝑚=1
+𝑁
+∑
+𝑛=1
+𝐗𝑖+𝑚−1,𝑗+𝑛−1 ⋅𝐖𝑚,𝑛+ 𝑏,
+(1)
+where 𝑀and 𝑁are the dimensions of the filter and 𝑏is the bias term.
+Further, the wear and potential failures of the machine are captured by
+these feature maps. Nonlinear activation functions (e.g., ReLU) are then
+applied to enhance the model’s capacity to capture complex, nonlinear
+degradation patterns:
+𝐀𝑖,𝑗= max(0, 𝐅𝑖,𝑗).
+(2)
+Subsequent pooling operations reduce dimensionality and focus on the
+most critical features, effectively condensing large volumes of sensor
+data into a compact, high-level representation. The resulting output,
+𝐗cnn, provides spatially refined features that serve as a robust foun-
+dation for downstream temporal modeling stages. By preserving key
+spatial characteristics of the machinery’s health state, the CNN outputs
+facilitate more accurate RUL estimation and inform the PdM decisions
+that follow.
+2.2. Temporal feature modeling
+Following the spatial features extraction by the CNN model, the data
+is now fed for temporal feature modeling. For this, we use two layers,
+namely the Transformer layer and the LSTM layer. These layers keeps
+the most important features from the input time-series data.
+1. Transformers: The Transformer layer focuses on identifying
+‘‘temporal features’’ and ‘‘long-term dependencies’’ via a self-
+attention mechanism. Unlike approaches reliant on positional
+information, the vanilla Transformer effectively highlights key
+time steps and relevant patterns in machinery degradation data.
+The output of the CNN, 𝐗cnn, serves as input to the Transformer:
+𝐗trans = 𝑓trans(𝐗cnn),
+where 𝐗trans is the Transformer output and 𝑓trans denotes the
+Transformer function. The core of the Transformer’s operation
+is the attention mechanism:
+Attention(𝐐, 𝐊, 𝐕) = softmax
+(
+𝐐𝐊𝑇
+√
+𝑑𝑘
+)
+𝐕,
+(3)
+where 𝐐, 𝐊, and 𝐕represent the query, key, and value matrices,
+respectively, and 𝑑𝑘is the dimensionality of the queries and
+keys. The Fig. 2 details the components of the Transformer
+architecture.
+2. Long Short-Term Memory (LSTM): The LSTM layer processes
+the Transformer’s output to capture longer sequential dependen-
+cies. The standard LSTM model is employed due to its reliability,
+lower computational demands, and broad applicability in se-
+quence tasks. By incorporating LSTMs, both recent and past
+information is maintained, improving RUL predictions:
+𝐗lstm = 𝑓LSTM(𝐗trans),
+where 𝐗lstm is the LSTM output and 𝑓LSTM is the LSTM function.
+The LSTM’s internal operations are defined as:
+𝐢𝑡= 𝜎(𝐖𝑥𝑖𝐱𝑡+ 𝐖ℎ𝑖𝐡𝑡−1 + 𝐛𝑖)
+𝐟𝑡= 𝜎(𝐖𝑥𝑓𝐱𝑡+ 𝐖ℎ𝑓𝐡𝑡−1 + 𝐛𝑓)
+𝐨𝑡= 𝜎(𝐖𝑥𝑜𝐱𝑡+ 𝐖ℎ𝑜𝐡𝑡−1 + 𝐛𝑜)
+𝐜𝑡= 𝐟𝑡⊙𝐜𝑡−1 + 𝐢𝑡⊙t anh(𝐖𝑥𝑐𝐱𝑡+ 𝐖ℎ𝑐𝐡𝑡−1 + 𝐛𝑐)
+𝐡𝑡= 𝐨𝑡⊙t anh(𝐜𝑡),
+where 𝐢𝑡, 𝐟𝑡, 𝐨𝑡are the input, forget, and output gates, 𝐜𝑡is
+the cell state, and 𝐡𝑡is the hidden state at time 𝑡. Weight
+matrices 𝐖𝑥𝑖, 𝐖𝑥𝑓, 𝐖𝑥𝑜, 𝐖𝑥𝑐connect inputs to gates/cell states,
+and 𝐖ℎ𝑖, 𝐖ℎ𝑓, 𝐖ℎ𝑜, 𝐖ℎ𝑐connect previous hidden states. Biases
+𝐛𝑖, 𝐛𝑓, 𝐛𝑜, 𝐛𝑐adjust these connections. The sigmoid function (𝜎)
+controls the gates, t anh updates the cell and hidden states, and
+the Hadamard product (⊙) performs element-wise multiplica-
+tion. Fig. 3 illustrates the two-layer LSTM architecture, each with
+128 units and a dropout rate of 0.2.
+While both Transformers and LSTM networks effectively process
+time series data, integrating them utilizes their complementary
+strengths in capturing temporal dependencies. Transformers excel at
+modeling long-range dependencies through self-attention mechanisms,
+effectively identifying global temporal patterns regardless of their
+position in the sequence. However, they may not capture local temporal
+dynamics as precisely as recurrent networks. Conversely, LSTMs are
+specifically designed to handle sequential data and excel at capturing
+local patterns through their gated structure, which controls the flow
+of information over time. By combining Transformers and LSTMs, our
+model effectively captures both global and local temporal dependencies
+in the time-series data, enhancing its ability to represent complex
+degradation processes and leading to more accurate RUL predictions.
+2.3. Smooth semi-martingale stochastic modeling
+In this section, we present the mathematical framework for the
+SSM model. This framework is designed to capture the changing be-
+havior of nonlinear and nonstationary degradation processes in indus-
+trial machinery. It enables precise and reliable predictions of RUL. As
+illustrated in Fig. 4, the model captures varying operational condi-
+tions and stochastic behaviors. Nonlinear trends, nonstationary vari-
+ance, and their combination (Fig. 4(a)–(c)) reflect complex real-world
+degradation processes.
+The system state at time 𝑡, denoted by 𝑡, is modeled as an SSM:
+𝑡= 0 + ∫
+𝑡
+0
+𝑔(𝑠, 𝑠) 𝑑 𝑠+ ∫
+𝑡
+0
+𝜎(𝑠, 𝑠) 𝑑 𝑊𝑠+ ∫
+𝑡
+0 ∫R
+𝛾(𝑠, 𝑠−, 𝑧) ̃𝑁(𝑑 𝑠, 𝑑 𝑧),
+(4)
+where 0 is the initial state of the system, 𝑔(𝑠, 𝑠) represents a non-
+linear degradation rate function, 𝜎(𝑠, 𝑠) is the volatility function,
+modulating the intensity of the stochastic component represented by
+standard Brownian motion 𝑊𝑠, and 𝛾(𝑠, 𝑠−, 𝑧) denotes the jump ampli-
+tude function, with ̃𝑁(𝑑 𝑠, 𝑑 𝑧) being the ‘‘compensated Poisson random
+measure’’ for jump events. Further, the martingale component 𝑀𝑡is
+decomposed into continuous and jump parts:
+𝑀𝑡= ∫
+𝑡
+0
+𝜎(𝑠, 𝑠) 𝑑 𝑊𝑠+ ∫
+𝑡
+0 ∫R
+𝛾(𝑠, 𝑠−, 𝑧) ̃𝑁(𝑑 𝑠, 𝑑 𝑧).
+
+--- Page 6 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+6
+Faizanbasha A. and U. Rizwan
+Fig. 2. Transformer architecture.
+Fig. 3. LSTM structure.
+Fig. 4. Nonlinear and Nonstationary degradation processes.
+
+--- Page 7 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+7
+Faizanbasha A. and U. Rizwan
+Fig. 5. Dynamic interaction of deterministic and stochastic influences in system state evolution.
+The degradation rate function 𝑔(𝑠, 𝑠) = a(𝑠) + b(𝑠) ⋅𝑓(𝑠) captures
+environmental and operational effects by employing time-dependent
+coefficients a(𝑠) and b(𝑠), along with a nonlinear function 𝑓(𝑠) tailored
+to machine characteristics. Concurrently, the stochastic component is
+modeled as a diffusion term driven by standard Brownian motion 𝑊𝑠,
+with volatility 𝜎(𝑠, 𝑠) = 𝜅(𝑠)⋅exp(𝜆(𝑠)𝑠). Here, 𝜅(𝑠) and 𝜆(𝑠) determine
+the scale and sensitivity of the volatility to the system state, reflecting
+the unpredictable nature of the degradation. Jumps are modeled by
+𝛾(𝑠, 𝑠−, 𝑧) = 𝜈(𝑠, 𝑠−)⋅ℎ(𝑧), linking jump impacts to pre-jump conditions
+via 𝜈(⋅) and modeling jump size distribution through ℎ(𝑧).
+The Fig. 5 illustrates how deterministic (green dashed line) and
+stochastic (blue line) components combine in the SSM model. The
+deterministic part tracks baseline degradation, while the stochastic
+component captures variability and abrupt disruptions, such as the
+random shock observed at 𝑡≈ 75. Their integration (red line) reflects
+real-world complexity, including times when the system state drops
+below acceptable thresholds (e.g., between 𝑡
+= 45 and 𝑡
+= 90),
+indicating elevated failure risks. The depicted confidence intervals
+and uncertainty regions quantify the model’s predictive uncertainty,
+with increasing variability as the system experiences higher stochastic
+volatility, particularly after 𝑡= 90. These findings show the SSM
+model’s capability to accurately capture nonlinear, nonstationary, and
+random influences, which are critical for precise RUL prediction.
+Parameter estimation procedure. Estimating the parameters 𝛩= (a, b, 𝜅 ,
+𝜆, 𝜈 , 𝑓 , ℎ) is critical for accurately modeling the degradation process. We
+utilize outputs from the LSTM network to inform initial estimates of
+𝑔(𝑠, 𝑠) and 𝜎(𝑠, 𝑠). Specifically, the LSTM outputs guide the fitting of
+degradation rates to the functional forms. For statistical estimation, we
+use Maximum Likelihood Estimation (MLE) on observed trajectories.
+Due to jump complexities, we discretize time into 𝑁intervals, forming
+increments 𝛥𝑖= 𝑡𝑖−𝑡𝑖−1 and a likelihood:
+(𝛩) =
+𝑁
+∏
+𝑖=1
+𝑝𝛥𝑖
+(
+𝛥𝑖∣𝑡𝑖−1; 𝛩
+)
+,
+where 𝑝𝛥𝑖are transition densities approximated by Euler–Maruyama
+for the continuous part and compound Poisson processes for jumps.
+We implement the Expectation-Maximization (EM) algorithm (Al-
+gorithm 1) to handle latent variables associated with unobserved jump
+times and sizes. The E-step computes expected values of these latent
+variables given current parameter estimates and observed data. The
+M-step maximizes the expected complete-data log-likelihood with re-
+spect to 𝛩. This iterative process continues until convergence, yielding
+estimated parameters that best fit the observed data.
+Algorithm 1
+Expectation-Maximization Algorithm for Parameter
+Estimation in the SSM Model
+1: Input: Observed states {𝑡𝑖}𝑁
+𝑖=0, initial parameter guess 𝛩(0)
+= (a, b, 𝜅 , 𝜆, 𝜈 , 𝑓 , ℎ),
+convergence threshold 𝜀
+2: Output: Estimated parameters 𝛩∗
+3: Preprocessing: Discretize the time interval into {𝑡𝑖}𝑁
+𝑖=0; form increments
+𝛥𝑖= 𝑡𝑖−𝑡𝑖−1 .
+4: Initialize 𝛩(0) (e.g., via LSTM-informed degradation rates or domain knowledge)
+5: 𝑘←0
+6: repeat
+7:
+E-step: (Expected Sufficient Statistics)
+8:
+1. Compute latent jump-related statistics (e.g., expected jump counts, sizes)
+given 𝛩(𝑘).
+9:
+2. Evaluate the expected complete-data log-likelihood E[log (𝛩∣𝛥, latent)].
+10:
+M-step: (Parameter Update)
+11:
+1. Maximize the expected complete-data log-likelihood w.r.t. 𝛩to obtain 𝛩(𝑘+1):
+𝛩(𝑘+1) ←ar g max
+𝛩E[log (𝛩∣𝛥, latent)].
+12:
+2. Update model functions 𝑔(𝑠, 𝑠), 𝜎(𝑠, 𝑠), and 𝛾(𝑠, 𝑠−, 𝑧) using new parameter
+values.
+13:
+𝑘←𝑘+ 1
+14: until ‖𝛩(𝑘) −𝛩(𝑘−1)‖ < 𝜀
+or maximum iterations reached
+15: Return: 𝛩∗←𝛩(𝑘)
+2.4. Reinforcement learning-based hyperparameter tuning
+In this section, we propose a new hyperparameter tuning method
+based on reinforcement learning. Determining the optimum set of
+hyperparameters 𝜃gives the best prediction accuracy in deep learning
+models. Traditional methods, such as grid search or Bayesian optimiza-
+tion, are often static and do not adapt to changing conditions during
+training. But RLHT adapts to changes during the training and test
+periods. This method treats the tuning process as a decision problem.
+Objective: Minimize the prediction error 𝐿(𝜃), where 𝐿represents
+metrics like RMSE or MAE.
+𝜃∗= ar g min
+𝜃𝐿(𝜃).
+(5)
+In this paper, we model the optimization of hyperparameter tuning
+problem under RLHT as a ‘‘Markov Decision Process (MDP)’’.
+2.4.1. Markov decision process (MDP) formulation
+The
+State Space
+𝑆𝑡
+consists of the current hyperparameters
+𝜃𝑡
+= 
+(𝜃1,𝑡, 𝜃2,𝑡, … , 𝜃𝑛,𝑡) and performance metrics 𝑃𝑡, defined as
+𝑆𝑡= (𝜃𝑡, 𝑃𝑡). The Action Space 𝐴𝑡modifies one or more hyperparameters,
+where 𝜃𝑖,𝑡is updated as 𝜃𝑖,𝑡+1 = 𝜃𝑖,𝑡+ 𝛥𝜃𝑖,𝑡. The Reward Function 𝑅𝑡
+measures performance improvement; for minimization, 𝑅𝑡= −𝛥𝐿(𝜃𝑡)
+= −(𝐿(𝜃𝑡+1) −𝐿(𝜃𝑡)). The Transition Probability 𝑃(𝑆𝑡+1|𝑆𝑡, 𝐴𝑡) describes
+the likelihood of reaching 𝑆𝑡+1, influenced by the model’s response to
+updated hyperparameters. Finally, the Policy 𝜋(𝑆𝑡) determines action
+selection to find the optimal policy 𝜋∗that maximizes cumulative
+rewards.
+
+--- Page 8 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+8
+Faizanbasha A. and U. Rizwan
+Table 1
+Performance comparison of Bayesian optimization and RLHT.
+Method
+MAE (lower is better)
+RMSE (lower is better)
+Tuning Time (hours)
+Bayesian Optimization
+12.34
+15.67
+5.4
+RLHT
+10.12
+13.45
+3.5
+2.4.2. Reinforcement learning algorithm
+The goal of the RL algorithm is to determine the optimal policy 𝜋∗
+that maximizes expected cumulative rewards:
+𝐺𝑡= E
+[ 𝑇∑
+𝑘=𝑡
+𝜌𝑘−𝑡𝑅𝑘
+]
+,
+(6)
+where 𝜌is the ‘‘discount factor’’ (0 ≤𝜌 < 1), which balances immediate
+and future rewards.
+Bellman Equation. The ‘‘optimal value function 𝑉∗(𝑆𝑡)’’ is:
+𝑉∗(𝑆𝑡) = max
+𝐴𝑡
+[
+𝑅𝑡+ 𝜌
+∑
+𝑆𝑡+1
+𝑃(𝑆𝑡+1|𝑆𝑡, 𝐴𝑡)𝑉∗(𝑆𝑡+1)
+]
+.
+(7)
+This equation forms the basis of dynamic programming solutions like
+‘‘Q-Learning’’ or ‘‘Deep Q-Networks (DQN),’’ which approximate 𝑉∗(𝑆𝑡)
+to derive the optimal policy.
+Q-Learning Algorithm. Q-Learning uses the action-value function
+𝑄(𝑆𝑡, 𝐴𝑡) to estimate expected rewards for choosing action 𝐴𝑡in state
+𝑆𝑡and following the optimal policy thereafter. The update rule is:
+𝑄(𝑆𝑡, 𝐴𝑡) ←𝑄(𝑆𝑡, 𝐴𝑡) + 𝛼
+[
+𝑅𝑡+ 𝜌max
+𝐴′ 𝑄(𝑆𝑡+1, 𝐴′) −𝑄(𝑆𝑡, 𝐴𝑡)
+]
+,
+(8)
+where 𝛼is the learning rate. The optimal policy is:
+𝜋∗(𝑆𝑡) = ar g max
+𝐴𝑡
+𝑄(𝑆𝑡, 𝐴𝑡)
+(9)
+Deep Q-Network (DQN). For large state–action spaces, a DQN ap-
+proximates 𝑄(𝑆 , 𝐴; 𝜃) with a neural network. The loss function for
+training the network is:
+(𝜃) = E
+[(
+𝑅𝑡+ 𝜌max
+𝐴′ 𝑄(𝑆𝑡+1, 𝐴′; 𝜃−) −𝑄(𝑆𝑡, 𝐴𝑡; 𝜃)
+)2]
+,
+(10)
+where 𝜃−is the target network parameters.
+The Algorithm 2 outlines the RLHT process, which iteratively ad-
+justs hyperparameters to optimize model performance.
+Algorithm 2 Reinforcement Learning-Based Hyperparameter Tuning
+(RLHT)
+1 Input: State space , Action space , Discount factor 𝜌, Learning rate 𝛼, Initial
+Q-network parameters 𝜃, Target network parameters 𝜃−, Replay buffer , Batch size 𝐵
+2 Output: Optimal hyperparameters 𝜃∗
+3 Initialize Q-network with 𝜃and target network 𝜃−←𝜃
+4 Initialize replay buffer 
+5 for each episode = 1 to 𝑁do
+6
+Initialize state 𝑆0
+7
+for each time step 𝑡= 0 to 𝑇do
+8
+Select action 𝐴𝑡via 𝜖-greedy policy:
+𝐴𝑡=
+{
+random action 
+with probability 𝜖
+ar g max𝐴𝑄(𝑆𝑡, 𝐴; 𝜃)
+otherwise
+9
+Execute action 𝐴𝑡to adjust hyperparameters and train the predictive model
+10
+Observe reward 𝑅𝑡and new state 𝑆𝑡+1
+11
+Store transition (𝑆𝑡, 𝐴𝑡, 𝑅𝑡, 𝑆𝑡+1) to 
+12
+Sample mini-batch of 𝐵transitions (𝑆𝑖, 𝐴𝑖, 𝑅𝑖, 𝑆𝑖+1) from 
+13
+Set target for each mini-batch transition: 𝑦𝑖= 𝑅𝑖+ 𝜌max
+𝐴′ 𝑄(𝑆𝑖+1, 𝐴′; 𝜃−)
+14
+Perform a gradient descent step on the loss function:
+(𝜃) = 1
+𝐵
+𝐵
+∑
+𝑖=1
+[𝑦𝑖−𝑄(𝑆𝑖, 𝐴𝑖; 𝜃)]2
+15
+Update 𝜃−←𝜃every 𝐶steps
+16
+Update state 𝑆𝑡←𝑆𝑡+1
+17
+end for
+18
+Decay 𝜖to reduce exploration over time
+19 end for
+20 Return Optimal hyperparameters 𝜃∗corresponding to the best observed performance
+To evaluate the effectiveness of RLHT, we compare it with Bayesian
+optimization in terms of MAE, RMSE, and tuning time. Table 1 presents
+the comparison results of RLHT and Bayesian optimization.
+Here, the Bayesian Optimization performed 50 iterations, while
+RLHT conducted 30 iterations. The different number of iterations is
+justified by RLHT’s faster convergence, allowing it to achieve superior
+performance with fewer trials. Both methods tested multiple com-
+binations of learning rates ([0.00001, 0.01]), dropout rates ([0.1, 0.5]),
+CNN filters ([32, 128]), and LSTM units ([32, 128]). Exploring a wide
+range of hyperparameter combinations involves substantial training
+overhead at each iteration, and our integrated CNN-Transformer-LSTM-
+SSM framework requires more computational steps per trial to capture
+both deterministic and stochastic degradation dynamics. Although the
+reported tuning times, 5.4 h for Bayesian Optimization and 3.5 h for
+RLHT may appear substantial, they reflect the complexity of testing
+a comprehensive hyperparameter space and training the integrated
+CNN-Transformer-LSTM-SSM model repeatedly on the NASA C-MAPSS
+FD001 dataset. Despite these tuning times, RLHT achieved lower MAE
+and RMSE compared to Bayesian Optimization, demonstrating that the
+additional computational effort translates into significantly improved
+RUL prediction performance. As this process is performed offline, the
+final deployment of the predictive maintenance framework remains
+unaffected in real-time operations. Crucially, RLHT’s faster convergence
+and superior accuracy (lower MAE and RMSE) underscore the benefits
+of this more targeted search approach.
+2.5. CNN-transformer-LSTM-SSM ensemble method
+This subsection introduces an ensemble approach that integrates
+CNN, transformers, LSTM networks, and the SSM model. The ensemble
+method uses the complementary strengths of these individual compo-
+nents to enhance the prediction of machinery failures and to improve
+the estimation of RUL.
+2.5.1. Ensemble architecture
+The proposed ensemble model functions as follows: CNN layers
+initially captures the ‘‘spatial features’’ from the input data, which
+are then forwarded to a Transformer module for capturing long-range
+dependencies. The LSTM component further refines temporal patterns,
+while the SSM layer provides stochastic modeling for more accurate and
+reliable predictions. The architecture of the proposed ensemble model
+for RUL prediction and PdM is presented in Fig. 6.
+2.5.2. Training process and system configuration
+The training of the CNN-Transformer-LSTM-SSM ensemble follows
+a sequential approach to effectively capture spatial, temporal, and
+stochastic features. Preprocessing involves dropping irrelevant features
+(columns 0, 1, 2, 3, 4, 5, 9, 10, 14, 20, 22, 23 in the NASA C-
+MAPSS dataset) and normalizing the remaining data using Min-Max
+scaling. Time-series data is segmented into overlapping sequences (30
+time steps, shift of 1-step) to preserve temporal dependencies. Each
+component CNN, Transformer, and LSTM is trained using supervised
+learning techniques. The CNN uses three Conv1D layers (filters: 64,
+128, 64; kernels: 7, 5, 3) to extract localized spatial features. The Trans-
+former’s multi-head attention mechanism highlights critical temporal
+elements, while two LSTM layers (128 units each, dropout 0.2) refine
+sequential patterns. Outputs are concatenated and passed through fully
+connected layers with ReLU activations, leading to a final output layer
+that predicts the RUL using a linear activation function.
+The ensemble is trained end-to-end using Adam optimizer (initial
+learning rate 0.0005) and optimized with RLHT model for parameters
+like learning rates, dropout, and attention settings. Early stopping
+with a patience of 10 epochs and learning rate reduction prevent
+
+--- Page 9 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+9
+Faizanbasha A. and U. Rizwan
+overfitting. Regularization techniques like L2 weight decay and batch
+normalization improve stability. The SSM parameters are estimated
+via MLE to ensure accurate stochastic modeling. The entire training
+process is implemented using TensorFlow and Keras in Python 3.7
+and executed on a high-performance computing system equipped with
+an Intel core i3 13th generation processor with 16 GB RAM, enabling
+efficient handling of large datasets and complex model architectures.
+2.6. Remaining useful life prediction under the smooth semi-martingale
+model
+Predicting the RUL of industrial systems with high accuracy en-
+ables effective maintenance scheduling, failure prevention, and cost
+savings. We present an RUL prediction framework utilizing the SSM
+model, a stochastic process that separates random dynamics into deter-
+ministic and stochastic components. This model simulates machinery
+degradation and estimates RUL as follows:
+RUL𝑡= inf {𝑢≥𝑡∶𝑢≥𝜁} −𝑡,
+(11)
+where RUL𝑡is the remaining useful life at time 𝑡, 𝑢represents the
+system state at time 𝑢, and 𝜁is the failure threshold.
+The state evolution 𝑡in the SSM model comprises deterministic
+and stochastic components (Eq. (4)), capturing both continuous degra-
+dation and sudden failures. To predict 𝑢for 𝑢 > 𝑡, we employ Monte
+Carlo simulations (Algorithm 3). These simulations generate multiple
+future paths of 𝑢, resulting in a distribution of RUL𝑡.
+Algorithm 3 Monte Carlo Simulation for RUL Prediction under SSM
+1 Input: Current state 𝑡, failure threshold 𝜁, model parameters 𝑔 , 𝜎 , 𝛾, time step 𝛥𝑡, total
+simulations 𝐾, max time 𝑇max
+2 Output: Distribution of RUL estimates
+3 Initialize an empty list for RULs: RUL𝑡←[]
+4 for 𝑘= 1 to 𝐾do
+⊳Monte Carlo iterations
+5
+Initialize 𝑢←𝑡, (𝑘)
+𝑢
+←𝑡
+⊳Set initial state and time
+6
+while (𝑘)
+𝑢
+< 𝜁and 𝑢≤𝑇max do
+⊳Check threshold or max time
+7
+Compute drift: 𝛥𝐷←𝑔(𝑢, (𝑘)
+𝑢)𝛥𝑡
+8
+Compute diffusion: 𝛥𝐵←𝜎(𝑢, (𝑘)
+𝑢)𝛥𝑊, 𝛥𝑊∼(0, 𝛥𝑡)
+9
+Simulate jumps: 𝑁∼Poisson(𝜆𝛥𝑡)
+10
+Compute total jump: 𝛥𝐽←∑𝑁
+𝑗=1 𝛾(𝑢, (𝑘)
+𝑢, 𝑧𝑗), 𝑧𝑗∼𝜈(𝑧)
+11
+Update state: (𝑘)
+𝑢+𝛥𝑡←(𝑘)
+𝑢
++ 𝛥𝐷+ 𝛥𝐵+ 𝛥𝐽
+12
+Increment time: 𝑢←𝑢+ 𝛥𝑡
+13
+end while
+14
+if (𝑘)
+𝑢
+≥𝜁then
+15
+Compute RUL for this simulation: RUL(𝑘)
+𝑡
+←𝑢−𝑡
+16
+else
+17
+RUL(𝑘)
+𝑡
+←𝑇max −𝑡 
+⊳Max time reached
+18
+end if
+19
+Append RUL(𝑘)
+𝑡
+to RUL𝑡
+20 end for
+21 Return: Compute statistics: mean, variance, and confidence intervals of RUL𝑡
+Each simulation updates the system state (𝑘)
+𝑢
+through drift (𝛥𝐷),
+diffusion (𝛥𝐵), and jumps (𝛥𝐽). Drift represents deterministic degra-
+dation, diffusion captures random fluctuations (𝛥𝑊∼(0, 𝛥𝑡)), and
+jumps model sudden failures using Poisson (𝑁) and jump size distribu-
+tion (𝜈(𝑧)). The simulation stops when (𝑘)
+𝑢
+exceeds 𝜁or reaches 𝑇max,
+with RUL as 𝑢−𝑡, generating a distribution of RUL estimates. Model
+performance is evaluated using RMSE for RUL predictions and accuracy
+for failure detection, with cross-validation to prevent overfitting.
+In Algorithm 3, each Monte Carlo iteration corresponds to one
+of the 𝐾independent simulations that generate a potential future
+degradation path for the system state 𝑡. By repeatedly simulating
+the drift, diffusion, and sudden jump components of the SSM model,
+the algorithm produces multiple prospective trajectories of 𝑢. This
+yields a distribution of RUL estimates, rather than a single determin-
+istic value, thereby quantifying uncertainty in how rapidly the system
+may degrade. The purpose of this Monte Carlo algorithm is twofold:
+(1) to capture the inherent variability and randomness in the degra-
+dation process, and (2) to provide statistical measures (e.g., mean and
+confidence intervals) for the RUL prediction. This distribution-driven
+approach is crucial for more robust decision-making in prognostics, as
+it enables maintenance strategies to account for worst-case scenarios,
+sudden failures, or extended lifetimes that deterministic models might
+overlook. The SSM-based RUL prediction framework is illustrated in
+Fig. 7.
+Representation of uncertainty in RUL predictions. Integrating the SSM
+model with the deep learning framework explicitly models the uncer-
+tainty in RUL predictions. The stochastic components 𝜎(𝑠, 𝑠) 𝑑 𝑊𝑠and
+𝛾(𝑠, 𝑠−, 𝑧) ̃𝑁(𝑑 𝑠, 𝑑 𝑧) capture random fluctuations and sudden degrada-
+tion jumps, respectively. By simulating multiple 𝑡paths using esti-
+mated parameters, we derive a distribution of degradation trajecto-
+ries and corresponding RUL estimates. This probabilistic framework
+quantifies RUL uncertainty and enables the construction of confidence
+intervals, supporting risk assessment and decision-making in predictive
+maintenance.
+3. Predictive maintenance scheduling and mission cycle optimiza-
+tion
+3.1. Predictive maintenance scheduling
+In this section, we present a PdM scheduling framework that uses
+raw sensor data and our proposed ensemble model to forecast the RUL
+of machinery.
+3.1.1. Predictive model integration for maintenance scheduling
+The ensemble model preprocesses sensor data 𝐗through normaliza-
+tion and segmentation, followed by CNNs extracting spatial features:
+𝐗feature = 𝑓CNN(𝑓Preprocess(𝐗)). Transformers capture long-range tempo-
+ral dependencies: 𝐗temporal = 𝑓trans(𝐗feature), which are further refined
+by LSTMs: 𝐗lstm = 𝑓LSTM(𝐗temporal). The SSM layer models the system
+state 𝑡with deterministic trends and stochastic fluctuations as:
+𝑡= 0 + ∫
+𝑡
+0
+𝑔(𝑠, 𝑠, 𝐗temporal) 𝑑 𝑠+ 𝑀𝑡,
+where 𝑀𝑡
+=
+∫𝑡
+0 𝜎(𝑠, 𝑠, 𝐗temporal) 𝑑 𝑊𝑠+ ∫𝑡
+0 ∫R 𝛾(𝑠, 𝑠−, 𝑧, 𝐗temporal)
+̃𝑁(𝑑 𝑠, 𝑑 𝑧). This model provides real-time health assessments, enabling
+the maintenance scheduling algorithm to optimize maintenance timing
+based on predicted RUL and failure probabilities.
+3.1.2. Maintenance scheduling optimization
+Maintenance scheduling aims to minimize the total cost of mainte-
+nance and failure using predicted RUL and failure probabilities. Let 𝜏
+denote the maintenance time. The optimal time 𝜏opt is:
+𝜏opt = ar g min
+𝜏≥𝑡E[𝐶(𝜏 , 𝜏, RUL𝑡)],
+(12)
+where 𝐶(𝜏 , 𝜏, RUL𝑡) represents the cost associated with both mainte-
+nance, urgency of intervention, and failure. In accordance with stan-
+dard practice in reliability and maintenance theory, a distinct baseline
+maintenance cost is employed for identical maintenance actions. To
+explicitly account for the urgency of intervention as RUL decreases, we
+introduce:
+𝐶(𝜏 , 𝜏, RUL𝑡) = 𝑐maint + 𝑐scale exp(−𝑘(RUL𝑡− (𝜏−𝑡))) + 𝑐fail I{𝜏≥𝜁}. (13)
+Here, 𝑐maint, 𝑐scale, and 𝑐fail represent the baseline maintenance cost, an
+urgency-based cost scaling term, and a failure penalty, respectively. The
+exponential term intensifies as the system approaches failure thresh-
+olds, signaling higher urgency for maintenance. This dynamic scaling
+captures real-world conditions, where delayed maintenance triggers
+emergency labor, secondary damage, and extended downtime, causing
+exponentially higher repair costs and operational risks. However, this
+scaling is optional; if 𝑐scale = 0, the cost function reduces to a standard
+cost model in reliability theory. The indicator function I{𝜏≥𝜁} imposes
+a penalty when the system’s degradation 𝜏exceeds the critical limit
+𝜁. The parameter 𝑘controls how rapidly the exponential cost rises as
+RUL decreases. By taking the expectation of 𝐶(𝜏 , 𝜏, RUL𝑡) over the
+
+--- Page 10 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+10
+Faizanbasha A. and U. Rizwan
+Fig. 6. The proposed ensemble model architecture.
+Fig. 7. Remaining useful life prediction using While Loop under the SSM model.
+stochastic degradation process, we inherently capture the probabilistic
+nature of system failure. This ensures robust real-time scheduling in
+complex, uncertain environments.
+3.1.3. PdM scheduling under the proposed ensemble model
+By continuously updating RUL predictions and expected costs, the
+PdM scheduling algorithm (Algorithm 4) triggers maintenance when
+RUL𝑡∕𝜁falls below prescribed thresholds, adjusting 𝜏opt as new data
+emerges. Each iteration acquires the current predicted RUL, evaluates
+maintenance and failure costs, and selects the 𝜏opt minimizing total
+expected cost. Computationally, the core complexity arises from RUL
+prediction (handled efficiently by the trained deep model) and a sim-
+ple one-dimensional search for 𝜏opt. Thus, the scheduling algorithm
+remains computationally tractable for real-time implementation.
+Algorithm 4 Predictive Maintenance Scheduling Based on Predicted
+RUL
+1 Input: Predicted RUL𝑡, degradation state 𝑡, failure threshold 𝜁, time horizon 𝑇,
+baseline cost 𝑐maint, scaling parameter 𝑐scale, failure penalty 𝑐fail, exponential rate 𝑘,
+risk tolerance 𝜖, model parameters 𝜃
+2 Output: Optimal maintenance schedule 𝜏opt
+3 Initialization: Initialize RUL0, 0, 𝜁, 𝜃, and 𝜖
+4 procedure Predict RUL
+5
+for 𝑡∈ [0, 𝑇] do
+6
+Update RUL𝑡= 𝑓PredictiveModel(𝑡; 𝜃) using sensor data.
+7
+Update degradation state 𝑡accordingly.
+8
+end for
+9 end procedure
+10 procedure Maintenance Decision
+11
+Set maintenance threshold 𝜏thresh.
+12
+if RUL𝑡≤𝜏thresh then
+13
+Schedule maintenance at time 𝑡.
+14
+else
+15
+Compute risk: Risk = RUL𝑡
+𝜁
+.
+16
+if Risk < 𝜖then
+17
+Trigger maintenance at time 𝑡.
+18
+else
+19
+Continue operations.
+20
+end if
+21
+end if
+22 end procedure
+23 procedure Cost Calculation
+24
+Compute cost at time 𝜏:
+𝐶(𝜏 , 𝜏, RUL𝑡) = 𝑐maint + 𝑐scale exp
+(
+−𝑘(RUL𝑡− (𝜏−𝑡)))
++ 𝑐fail I{𝜏≥𝜁},
+where I{⋅} is the indicator function. (Note: Setting 𝑐scale = 0 reverts to the standard cost
+model.)
+25 end procedure
+26 procedure Cost Optimization
+27
+For 𝑡∈ [0, 𝑇], compute the expected cost: ̂𝐶(𝑡) = E
+[
+𝐶(𝑡, 𝑡, RUL𝑡)
+]
+.
+28
+Determine the optimal maintenance time: 𝜏opt = ar g min
+𝑡∈[0,𝑇]
+̂𝐶(𝑡).
+29 end procedure
+30 procedure Dynamic Adjustment
+31
+Continuously update RUL𝑡and 𝑡with new sensor data.
+32
+Recalculate ̂𝐶(𝑡) and adjust 𝜏opt as needed.
+33
+If significant deviations occur, trigger rescheduling.
+34 end procedure
+35 return Optimal maintenance schedule 𝜏opt
+
+--- Page 11 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+11
+Faizanbasha A. and U. Rizwan
+Practical applications of the PdM scheduling model. Integrating accurate
+RUL predictions into maintenance scheduling enables just-in-time ac-
+tions, minimizing costly downtime and preventing catastrophic failures.
+In high-stakes sectors such as aerospace, nuclear power, and pharma-
+ceutical production, data-driven maintenance enhances safety, extends
+equipment life, and ensures operational continuity. In manufacturing,
+PdM reduces unexpected breakdowns, optimizes production schedules,
+and improves efficiency. Similarly, energy, oil and gas, transportation,
+and healthcare benefit from precise strategies that boost system re-
+liability, streamline resource allocation, and ensure compliance with
+strict safety standards. By reducing downtime, optimizing inventory
+and manpower use, and improving operational efficiency, PdM delivers
+a competitive edge in cost-sensitive, risk-intensive global markets.
+The feasibility of the proposed PdM model is ensured through:
+(1) Computational Efficiency. The pretrained ensemble-based RUL pre-
+dictor enables rapid inference, while the one-dimensional optimization
+for 𝜏opt keeps scheduling computationally lightweight. (2) Real-Time
+Implementation. Incremental sensor updates dynamically refine RUL
+and cost estimates, while seamless integration with the mission abort
+strategy ensures synchronized decision-making based on updated risk
+profiles. (3) Scalability and Adaptability. The modular design supports
+diverse systems by decoupling RUL prediction from scheduling, and
+adjustable parameters with dynamic recalibration allow customization
+for specific operational and risk requirements.
+3.2. Mission cycles assignment and optimization based on the proposed
+ensemble model
+In mission-critical systems, such as aerospace operations, engines
+must be dynamically assigned to mission cycles comprising sequential
+segments with specific time windows, reliability requirements, and
+varying operational conditions. The proposed ensemble model provides
+accurate RUL predictions, enabling a scenario-based multi-stage opti-
+mization that reallocates engines, adjusts mission plans, and schedules
+maintenance to minimize overall costs and mitigate mission failure
+risks.
+3.2.1. Mission cycle assignment
+Consider a set of missions = {𝑀1, … , 𝑀𝑚}, where each mission
+𝑀𝑗consists of 𝐿𝑗segments (𝑀𝑗 ,1, … , 𝑀𝑗 ,𝐿𝑗). Each segment 𝑀𝑗 ,𝓁is exe-
+cuted within the time window [𝑡start
+𝑗 ,𝓁, 𝑡end
+𝑗 ,𝓁] and requires a minimum RUL
+𝐷𝑗 ,𝓁for the assigned engine at 𝑡start
+𝑗 ,𝓁. The set of engines is denoted as
+= {𝐸1, … , 𝐸𝑛}. Uncertainties in mission loads, environmental factors,
+engine degradation, and resource availability are modeled through a
+scenario set 𝛺, where P(𝜔) is the probability of scenario 𝜔∈𝛺. These
+scenarios reflect changes such as weather patterns, unplanned route
+adjustments, or delays in spare parts supply.
+We define binary variables 𝑥𝑖,𝑗 ,𝓁∈ {0, 1} to indicate if engine 𝐸𝑖
+is assigned to segment 𝑀𝑗 ,𝓁, and continuous variables 𝑦𝜔
+𝑗
+∈ [0, 1]
+to represent the fraction of mission 𝑀𝑗completed under scenario 𝜔.
+The objective is to minimize expected costs, including maintenance,
+fuel, and failure penalties. Let 𝐶𝜔
+𝑖,𝑗 ,𝓁be the scenario-dependent cost of
+assigning engine 𝐸𝑖to segment 𝑀𝑗 ,𝓁, and 𝑈𝜔
+𝑗denote the penalty for not
+completing mission 𝑀𝑗. The two-stage stochastic program is formulated
+as:
+min
+𝑥,𝑦
+∑
+𝜔∈𝛺
+P(𝜔)
+⎛
+⎜
+⎜⎝
+𝑚
+∑
+𝑗=1
+𝐿𝑗
+∑
+𝓁=1
+𝑛
+∑
+𝑖=1
+𝐶𝜔
+𝑖,𝑗 ,𝓁𝑥𝑖,𝑗 ,𝓁+
+𝑚
+∑
+𝑗=1
+𝑈𝜔
+𝑗(1 −𝑦𝜔
+𝑗)
+⎞
+⎟
+⎟⎠
+,
+(14)
+subject to:
+𝑛
+∑
+𝑖=1
+𝑥𝑖,𝑗 ,𝓁= 1 ∀𝑗 , 𝓁,
+(15)
+RUL𝜔
+𝑖,𝑡𝑗 ,𝓁≥𝐷𝑗 ,𝓁𝑥𝑖,𝑗 ,𝓁
+∀𝑖, 𝑗 , 𝓁, 𝜔,
+(16)
+𝑥𝑖,𝑗 ,𝓁∈ {0, 1}, 
+𝑦𝜔
+𝑗∈ [0, 1].
+Additional constraints incorporate mission-specific requirements. If a
+segment 𝑀𝑗 ,𝓁demands high-thrust operations, the RUL must also sat-
+isfy an additional buffer 𝛥𝐷𝜔
+𝑗 ,𝓁:
+𝑥𝑖,𝑗 ,𝓁= 1 ⇒RUL𝜔
+𝑖,𝑡𝑗 ,𝓁≥𝐷𝑗 ,𝓁+ 𝛥𝐷𝜔
+𝑗 ,𝓁.
+(17)
+Engines in abrasive conditions, such as sandstorms, consume extra
+cycles ℎ𝜔
+𝑖,𝑗 ,𝓁, constrained by scenario-dependent limits L𝜔
+𝑖:
+𝑚
+∑
+𝑗=1
+𝐿𝑗
+∑
+𝓁=1
+ℎ𝜔
+𝑖,𝑗 ,𝓁𝑥𝑖,𝑗 ,𝓁≤L𝜔
+𝑖.
+If engine 𝐸𝑖lacks required certifications for segment 𝑀𝑗 ,𝑠, it cannot be
+assigned:
+𝑥𝑖,𝑗 ,𝓁= 0
+if 𝐸𝑖lacks certification for 𝑀𝑗 ,𝓁.
+(18)
+Let 𝛬𝜔
+𝑡be the maintenance crew capacity at time 𝑡under scenario
+𝜔, and 𝜑𝑖the crew workload for engine 𝐸𝑖. Then:
+𝑛
+∑
+𝑖=1
+𝜑𝑖𝑚𝜔
+𝑖,𝑡≤𝛬𝜔
+𝑡,
+∀𝑡, 𝜔,
+(19)
+where 𝑚𝜔
+𝑖,𝑡∈ {0, 1} indicates if 𝐸𝑖is scheduled for maintenance at time 𝑡.
+Further, engine assignments must not exceed available spares 𝑆𝜔:
+𝑚
+∑
+𝑗=1
+𝐿𝑗
+∑
+𝓁=1
+𝑥𝑖,𝑗 ,𝓁≤𝑆𝜔,
+∀𝑖, 𝜔.
+(20)
+3.2.2. Mission operation and real-time monitoring
+During mission execution, the engine health state 𝑡evolves accord-
+ing to the SSM model:
+𝑡= 0 + ∫
+𝑡
+0
+𝑔(𝑠, 𝑠) 𝑑 𝑠+ 𝑀𝑡,
+(21)
+where 𝑔represents the deterministic degradation rate, and 𝑀𝑡models
+stochastic fluctuations and sudden failures. Real-time sensor data up-
+dates the RUL estimates RUL𝜔
+𝑖,𝑡for each engine 𝐸𝑖. If 𝜔
+𝑡
+approaches
+a critical threshold 𝜁, the model initiates immediate actions such as
+aborting a mission segment, rerouting missions, reallocating engine
+loads, or scheduling immediate maintenance. At each decision epoch 𝑡,
+the optimization problem (Eq. (14)) is re-solved with updated scenarios
+𝛺𝑡, reflecting current engine health and mission status. By utilizing a
+receding horizon approach, the framework adapts to evolving condi-
+tions, reducing failures and associated costs while acknowledging that
+not all scenarios guarantee full mission completion.
+3.2.3. Optimization and fine-tuning
+Let 𝐶𝜔
+maint,𝑖,𝑗 ,𝓁, 𝐶𝜔
+fuel,𝑖,𝑗 ,𝓁, and 𝐶𝜔
+fail,𝑖,𝑗 ,𝓁represent maintenance, fuel,
+and failure costs for engine 𝑖, segment 𝑗 , 𝓁, and scenario 𝜔, respectively.
+The total cost, including penalties 𝑝for mission aborts, is defined as:
+𝐶total =
+𝑚
+∑
+𝑗=1
+𝐿𝑗
+∑
+𝓁=1
+𝑛
+∑
+𝑖=1
+(
+𝐶𝜔
+maint,𝑖,𝑗 ,𝓁+ 𝐶𝜔
+fuel,𝑖,𝑗 ,𝓁+ 𝐶𝜔
+fail,𝑖,𝑗 ,𝓁
+)
+𝑥𝑖,𝑗 ,𝓁
++
+𝑚
+∑
+𝑗=1
+𝑈𝜔
+𝑗(1 −𝑦𝜔
+𝑗) + 𝑝⋅I{Failures>𝜁′},
+(22)
+The decision variables 𝑥𝑖,𝑗 ,𝓁ensure that only selected actions contribute
+to the total cost. Operational penalties ∑𝑚
+𝑗=1 𝑈𝜔
+𝑗(1 −𝑦𝜔
+𝑗) enforce mission
+completion, while 𝑝⋅I{Failures>𝜁′} penalizes excessive failures, with 𝜁′
+representing the acceptable failure threshold.
+Parameter tuning 𝜃minimizes the expected total cost across all
+scenarios 𝛺:
+min
+𝜃
+∑
+𝜔∈𝛺
+P(𝜔) (𝐶total(𝜃 , 𝜔) + 𝑝⋅I{Failures(𝜃 ,𝜔)>𝜁′}
+) .
+(23)
+This optimization balances operational costs with reliability and mis-
+sion success. Techniques such as scenario reduction, robust optimiza-
+tion, and decomposition enhance computational efficiency for large-
+scale problems.
+
+--- Page 12 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+12
+Faizanbasha A. and U. Rizwan
+3.2.4. Minimizing maintenance costs
+Maintenance scheduling optimizes the balance between scheduled
+and unscheduled maintenance to minimize total costs and operational
+downtime. The maintenance cost function is defined as:
+𝐶maint =
+𝑛
+∑
+𝑖=1
+(𝑐sch,𝑖𝑚𝑖+ 𝑐unsch,𝑖(1 −𝑚𝑖)) ,
+(24)
+where 𝑚𝑖∈ {0, 1} indicates whether engine 𝐸𝑖undergoes scheduled
+maintenance. Scheduled maintenance incurs a lower cost 𝑐sch,𝑖, while
+unscheduled repairs following unexpected failures are more costly,
+denoted by 𝑐unsch,𝑖.
+To ensure maintenance is performed before critical degradation, we
+constraint:
+𝑚𝑖≥
+𝑥𝑖,𝑗 ,𝓁ℎ𝜔
+𝑖,𝑗 ,𝓁
+𝐻𝜔
+𝑖
+∀𝑖, 𝑗 , 𝓁, 𝜔,
+(25)
+where 𝐻𝜔
+𝑖is the maximum allowable wear for engine 𝐸𝑖under scenario
+𝜔. This constraint links maintenance decisions 𝑚𝑖to usage-induced
+degradation ℎ𝜔
+𝑖,𝑗 ,𝓁, ensuring maintenance is triggered when the risk of
+imminent failure increases.
+Additionally, to manage spare parts logistics, we impose:
+𝑛
+∑
+𝑖=1
+𝑠𝑖𝑚𝑖≤𝑆𝜔,
+∀𝑡, 𝜔,
+(26)
+where 𝑠𝑖represents the spare parts requirement for engine 𝐸𝑖and 𝑆𝜔
+denotes the spare parts capacity under scenario 𝜔.
+4. Dynamic mission abortion policy based on predicted RUL
+In mission-critical operations, deciding whether to abort a mission
+relies on accurate and timely RUL predictions [50,51]. Recent studies
+have refined mission abort strategies by incorporating multi-component
+failure interactions [39], adaptive policies for uncertain shock envi-
+ronments [43], and joint optimization with system structure to handle
+dynamic tasks [45]. The proposed dynamic mission abortion policy
+uses real-time RUL estimates from the CNN-Transformer-LSTM-SSM
+ensemble model, enabling informed decisions on whether to continue,
+adjust, or abort a mission. The RUL, denoted as RUL𝑡, is updated as:
+RUL𝑡= 𝑓LSTM(𝑓trans(𝑓CNN(𝐗𝑡))) + 𝑀𝑡,
+where 𝑀𝑡captures stochastic degradation dynamics.
+4.1. Dynamic thresholds based on RUL
+Unlike static thresholds, the dynamic threshold 𝜏𝑡adapts to evolving
+system health and stochastic degradation patterns [52].
+𝜏𝑡= 𝜏0 ⋅exp(−𝛿⋅(𝑡−𝑡0)) + 𝜉(𝑡),
+(27)
+where 𝜏0 is derived from mission-level reliability requirements, 𝛿 > 0
+controls sensitivity to time and usage, and 𝜉(𝑡) represents stochastic
+variations. As 𝑡increases, 𝜏𝑡decreases, reflecting higher failure risks
+as components near end-of-life, as modeled by the SSM.
+Here, the term exp(−𝛿(𝑡−𝑡0)) aligns with the observed acceleration
+in failure probabilities for aging machinery, and 𝜉(𝑡) captures sudden
+jumps. This integration ensures that 𝜏𝑡accurately tracks the distribution
+of future states 𝑡, grounding the threshold in the same stochastic
+mechanics (SSM structure) that govern RUL estimation. The parameters
+𝜏0, 𝛿, and the properties of 𝜉(𝑡) are optimized using RLHT with historical
+run-to-failure data (e.g., NASA C-MAPSS). Specifically, 𝛿is tuned to
+balance false alarms and missed detections, while 𝜉(𝑡) is modeled as
+a noise process through MLE to match empirical operational variance.
+These dynamic thresholds thus adapt to both deterministic drift and
+stochastic volatility, aligning maintenance actions with real-time risk
+assessments.
+4.2. Continuous monitoring and preemptive alerts
+In this framework, continuous monitoring of the RUL enables timely
+preemptive alerts that prevent unexpected failures. The PdM closely
+tracks the RUL (RUL𝑡) and triggers alerts when it nears a dynamic
+threshold 𝜏𝑡. The rate of change of RUL, 𝛥RUL𝑡
+=
+𝑑(RUL𝑡)
+𝑑 𝑡
+, serves
+as an early warning signal. An alert is issued if 𝛥RUL𝑡exceeds a
+time-dependent threshold:
+𝑎𝑡= 𝑎0 ⋅exp(−𝜅⋅(𝑡−𝑡0)) + 𝜙(𝑡),
+(28)
+where 𝑎0 is the initial baseline, 𝜅 > 0 controls alert sensitivity over
+time, and 𝜙(𝑡) captures mission-specific conditions.
+SSM-based RUL predictions capture degradation increments from
+Brownian motion and Poisson jumps. The rate 𝛥RUL𝑡reflects these
+changes, and comparing it to 𝑎𝑡identifies abnormal surges. When
+𝛥RUL𝑡> 𝑎𝑡, it signals significant deviations from expected stochastic
+patterns, requiring immediate intervention.
+Practical implementation. When 𝛥RUL𝑡> 𝑎𝑡, maintenance actions
+include: (1) Inspecting the engine for issues, (2) Reassigning tasks to
+healthier engines, and (3) Adjusting operational parameters to reduce
+degradation. The adaptable 𝑎𝑡minimizes false positives during stable
+periods while preventing failures that static thresholds overlook. More-
+over, the PdM model is integrated with the dynamic mission abort
+strategy through continuous real-time updates of RUL predictions and
+risk assessments. As the PdM model refines RUL estimates, it calculates
+the risk of failure, which is then communicated to the mission abort
+policy. If the predicted RUL falls below critical thresholds, the mission
+abort strategy triggers an abort decision to prevent failure. This interac-
+tion ensures that the PdM model drives maintenance scheduling, while
+the abort policy dynamically responds to evolving risk, maintaining
+system safety and mission success. Further, the Fig. 8 presents the
+decision process flowchart for the dynamic mission abort policy based
+on predicted RUL and associated costs.
+4.3. Mission reallocation and optimization based on RUL
+When the predicted RUL of an aircraft engine is insufficient to safely
+complete a mission, the policy assesses whether to shift the mission to
+another aircraft. Let 𝐴𝑗represent the current aircraft and 𝐴𝑘a potential
+replacement. The reallocation decision minimizes expected total cost,
+considering both transfer and operational expenses:
+𝐶shift = min
+𝑘
+[
+𝐶transfer(𝐴𝑗, 𝐴𝑘) + 𝐶oper(𝐴𝑘) ⋅I{RUL𝑘,𝑡>𝜏𝑡}
+]
+,
+where 𝐶transfer(𝐴𝑗, 𝐴𝑘) is the transfer cost and 𝐶oper(𝐴𝑘) the operating
+cost for the new aircraft.
+The mission is reassigned if:
+𝐶shift < 𝐶cont(𝑡) + 𝐶risk(𝑡),
+where 𝐶risk(𝑡) is the expected failure cost of continuing with the original
+aircraft.
+4.4. Cost function and optimization
+We define the total expected cost of the mission, 𝐶total(𝑡), to capture
+the financial implications of continuing or aborting the mission based
+on the engine’s RUL. The cost function is expressed as:
+𝐶total(𝑡) = I{RUL𝑡≤𝜏𝑡}
+(𝐶abort(𝑡) + 𝐶shift
+) + I{RUL𝑡>𝜏𝑡}𝐶cont(𝑡).
+(29)
+When RUL𝑡≤𝜏𝑡, the mission incurs the costs of aborting 𝐶abort(𝑡)
+and shifting to another aircraft 𝐶shift, reflecting the need to mitigate
+failure risks. Conversely, if RUL𝑡> 𝜏𝑡, only the cost of continuing the
+mission 𝐶cont(𝑡) is incurred, representing ongoing operational expenses.
+By adjusting mission decisions based on the engine’s health, this formu-
+lation ensures economically optimal outcomes and minimizes overall
+mission-related costs.
+
+--- Page 13 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+13
+Faizanbasha A. and U. Rizwan
+Fig. 8. Dynamic mission abort policy flowchart.
+5. Post-mission abortion and aircraft shifting analysis
+In mission-critical operations, analyzing the post-abortion phase can
+improve future cycle assignments, facilitate mission shifts to alterna-
+tive aircraft, and inform re-engagement strategies. By incorporating
+maintenance, re-engagement timing, spare aircraft management, and
+dynamic mission re-shifting, the decision-making framework becomes
+more resilient and cost-effective.
+5.1. Post-abortion maintenance and re-engagement
+When an aircraft is aborted due to predicted failure or insuffi-
+cient RUL, it undergoes maintenance to restore its health. The post-
+maintenance health state maint(𝑡) evolves as:
+maint(𝑡) = init −∫
+𝑡
+𝑡0
+𝑟(𝑠) 𝑑 𝑠+ 𝜖(𝑡),
+where init is the health at abortion, 𝑟(𝑠) the recovery rate, and
+𝜖(𝑡) captures stochastic delays. The aircraft can be re-engaged once
+maint(𝑡) ≥𝜁re, where 𝜁re is the dynamic threshold indicating sufficient
+recovery to safely rejoin the mission.
+5.2. Optimal re-engagement strategy
+For re-engaging a previously aborted aircraft to the same mission,
+we should account for both the risks of re-engagement and the potential
+benefits of mission completion. We define the re-engagement cost
+function as:
+𝐶re(𝑡) = 𝐶maint + E
+[
+𝐶fail(𝑡) ⋅I{maint(𝑡)<𝜁re}
+]
+.
+(30)
+Now, the optimal re-engagement time 𝑡opt that minimizes costs is:
+𝑡opt = ar g min
+𝑡≥𝑡ready
+{𝐶re(𝑡) + 𝐶missed(𝑡)} .
+(31)
+Here, 𝑡ready is the earliest time when maint(𝑡) ≥𝜁re and 𝐶missed(𝑡) is the
+cost of lost mission opportunities during downtime.
+5.3. Dynamic aircraft shifting and spare management
+When a secondary aircraft replaces the aborted one, decisions about
+retaining it as the primary asset or assigning it as a spare depend on its
+utility function:
+𝑈(𝐴𝑘) = 𝐶oper(𝐴𝑘) + (1 −𝑃fail(𝐴𝑘, 𝑡)),
+where 𝑃fail(𝐴𝑘, 𝑡) is the failure probability. If 𝑈(𝐴𝑘) < 𝛿spare, the aircraft
+is shifted to a spare role to reduce operational load.
+5.4. Re-shifting and multi-aircraft optimization
+After maintenance, deciding whether to reassign the mission back
+to the original aircraft or continue with the secondary aircraft depends
+on the expected benefit of re-shifting:
+𝐵shift(𝑡) = E [𝑆re(𝑡) −𝑆cont(𝑡)] ,
+where 𝑆re(𝑡) and 𝑆cont(𝑡) are the success probabilities if re-shifting or
+continuing, respectively. The re-shift occurs if:
+𝐵shift(𝑡) −𝐶shift(𝑡) > 𝛿shift,
+ensuring re-shifting improves mission success and justifies associated
+costs.
+5.5. Cost optimization and final mission analysis
+To ensure that all decisions made post-abortion are optimal, the sys-
+tem continuously updates a total cost function 𝐶total(𝑡), which includes
+all possible costs associated with re-engagement, continued operation,
+and aircraft re-shifting:
+𝐶total(𝑡) = 𝐶re(𝑡) + 𝐶oper(𝐴𝑘, 𝑡) + 𝐶shift(𝑡).
+(32)
+We aim to minimize this cost function to complete the mission assign-
+ments in the most optimal and reliable way. Furthermore, it guides
+managers to make optimal decisions during the post-abortion phase.
+6. Experimental analysis
+In this section, we evaluate the proposed ensemble model on NASA’s
+C-MAPSS benchmark dataset, focusing on its performance across four
+subsets (FD001-FD004). We also analyze the proposed mission cycle
+assignment, dynamic mission abortion policy, and post-abortion main-
+tenance, demonstrating their effectiveness in optimizing operations,
+minimizing downtime, and reducing costs.
+6.1. C-MAPSS dataset overview
+For prognostics and RUL prediction, the NASA C-MAPSS dataset is
+a widely used benchmark. It contains historical run-to-failure turbofan
+engine data. Each engine operates under three operational settings
+until failure. The dataset is divided into four subsets: FD001 (single
+condition, one fault mode), FD002 (multiple conditions, one fault
+mode), FD003 (one condition, multiple fault modes), and FD004 (mul-
+tiple conditions and fault modes), adding complexity and realism. In
+Fig. 9 (a), we illustrate the turbofan engine chassis including the
+
+--- Page 14 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+14
+Faizanbasha A. and U. Rizwan
+Fig. 9. Turbofan rotation section.
+fan, Low-Pressure Compressor (LPC), High-Pressure Compressor (HPC),
+High-Pressure Turbine (HPT), Low-Pressure Turbine (LPT), and nozzle.
+The HPT extracts energy to drive the HPC, and the LPT extracts energy
+to drive the fan and LPC, all connected via a rotating shaft. The
+nozzle directs exhaust gases out of the engine, contributing to thrust.
+Fig. 9 (b) shows a side view detailing airflow through the inlet, com-
+bustion chamber, and exhaust, emphasizing internal rotation [53]. The
+C-MAPSS dataset, with about 265,256 data points across four subsets,
+includes training and testing data with true RUL values. It is a key PHM
+resource enabling development and evaluation of predictive models.
+Dataset Division and Model Training. For each C-MAPSS subset
+(FD001–FD004), the dataset consists of three subfiles: ‘‘train_
+FD001.txt’’, ‘‘test_FD001.txt’’, and ‘‘RUL_FD001.txt’’ (similarly struc-
+tured for FD002, FD003, and FD004). Specifically, ‘‘train_FD001.txt’’
+and ‘‘test_FD001.txt’’ record various operational and sensor parameters
+of the turbofan engine as detailed in Table 2, while ‘‘RUL_FD001.txt’’
+provides the true RUL corresponding to the engines in ‘‘test_FD001.txt’’.
+The training data is further divided into 80% for training and 20%
+for validation to facilitate hyperparameter tuning and ensure robust
+model performance. During training, we employed the Mean Squared
+Error (MSE) loss function to optimize the model’s predictive accuracy
+for RUL:
+MSE = 1
+𝑁
+𝑁
+∑
+𝑖=1
+(RULpredicted,𝑖−RULtrue,𝑖
+)2 ,
+(33)
+where RULtrue,𝑖denotes the true RUL and RULpredicted,𝑖is the pre-
+dicted RUL for the 𝑖-th sample. To enhance generalization and mitigate
+overfitting, an L2 regularization term is incorporated:
+= MSE + 𝜍
+𝐽
+∑
+𝑗=1
+‖𝜽𝑗‖2,
+(34)
+where 𝜍is a hyperparameter governing the strength of regularization,
+𝜽𝑗represents the model parameters (e.g., network weights) in the 𝑗-th
+layer, and 𝐽is the total number of parameter sets in the model. This
+combined loss function ensures high predictive accuracy while prevent-
+ing overfitting, thereby enhancing the model’s generalization to unseen
+data. As summarized in Table 2 and illustrated by the distributions in
+Fig. 10, each subset’s unique conditions and fault modes pose distinct
+challenges. Despite these complexities, our ensemble model remains ro-
+bust, achieving low RMSE and S-scores and effectively handles diverse
+scenarios.
+6.1.1. Analysis of nonlinear and nonstationary degradation in the
+C-MAPSS dataset
+To demonstrate nonlinear and nonstationary degradation patterns
+in the C-MAPSS dataset, we analyze degradation trajectories of multiple
+FD001 subset engines. Fig. 11 shows normalized degradation metrics
+over cycles for Engines #15, #27, #46, and #74, highlighting accel-
+erated degradation and increasing variance. The degradation metric,
+derived from sensor_11, is sensitive to engine health. For com-
+parison, readings were normalized to [0, 1] using min–max scaling.
+As shown in Fig. 11, these engines’ degradation processes exhibit
+nonlinear and nonstationary characteristics:
+• Nonlinear Degradation: Each engine accelerates degradation
+after a specific cycle (e.g., cycle 160 for Engine #15), indicat-
+ing a nonlinear degradation rate. This suggests more aggressive
+wear mechanisms near failure, consistent with real-world factors
+like material fatigue and increased friction. Moreover, evidence
+from [49] supports this behavior, as damage propagation is mod-
+eled with exponential fault progression influenced by noise and
+operational variability, which can produce nonlinear shifts in
+observed health indices.
+• Nonstationary 
+Variance:
+Degradation 
+metric 
+variability
+increases over time, especially in later operational cycles. This
+nonstationarity indicates that stochastic fluctuations become more
+pronounced as engines age, reflecting time-varying degradation
+dynamics. The C-MAPSS modeling approach incorporates process
+noise and operational variability, which inherently induce such
+characteristics, as described in [49].
+Accelerated degradation points were identified by detecting significant
+changes in the local slope of the degradation metric using finite-
+difference methods and derivative analysis. Similarly, increasing vari-
+ance regions were marked by monitoring the evolution of the standard
+deviation of residual fluctuations over consecutive cycles. These ob-
+servations confirm that the C-MAPSS dataset exhibits nonlinear shifts
+and nonstationary variance, validating the CNN-Transformer-LSTM-
+SSM model. The Transformer layer captures temporal dependencies,
+while the SSM component manages stochastic fluctuations, ensuring
+accurate and stable RUL predictions. This approach achieves consis-
+tently lower RMSE and S-scores, improving prediction accuracy across
+evolving engine health states.
+6.1.2. Performance evaluation metrics: RMSE and S-score
+In industrial machinery systems, accurately predicting the RUL can
+help the PdM to schedule maintenance optimally. Therefore, evaluating
+the predictions made by the model is important. For this, we consider
+‘‘two performance metrics,’’ namely the ‘‘RMSE’’ and ‘‘S-Score’’.
+Root mean squared error (RMSE). The RMSE is a widely used regression
+metric that measures the average magnitude of prediction errors. It
+is particularly useful because it gives greater weight to larger errors,
+making it sensitive to outliers:
+RMSE =
+√
+√
+√
+√1
+𝑛
+𝑛
+∑
+𝑖=1
+(RULpredicted,𝑖−RULtrue,𝑖
+)2,
+(35)
+where 𝑛refers to the total number of predictions. RULpredicted,𝑖denotes
+the predicted RUL for the 𝑖-th data point, and RULtrue,𝑖is the true RUL
+for the same 𝑖-th data point. The lower RMSE values indicate higher
+prediction accuracy between predicted and true RUL.
+
+--- Page 15 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+15
+Faizanbasha A. and U. Rizwan
+Table 2
+Details of the C-MAPSS dataset.
+Feature
+FD001
+FD002
+FD003
+FD004
+Number of Engines (Training)
+100
+260
+100
+249
+Number of Engines (Test)
+100
+259
+100
+248
+Operating Conditions
+One (Sea Level)
+Six
+One (Sea Level)
+Six
+Fault Modes
+One (HPC Degradation)
+One (HPC Degradation)
+Two (HPC Degradation,
+Fan Degradation)
+Two (HPC Degradation, Fan
+Degradation)
+Training Samples
+20,631
+53,759
+24,720
+61,249
+Test Samples
+13,096
+33,991
+16,596
+41,214
+Sensor Drift Patterns
+Minimal
+Varied across conditions
+Minimal
+Varied across conditions
+Operational Challenges
+Uniform
+Diverse due to multiple
+conditions
+Uniform
+Diverse due to multiple
+conditions
+Typical Failure Modes
+Compressor degradation
+Compressor & turbine
+faults
+Electronics failure,
+Compressor degradation
+Electronics failure, Turbine
+faults
+Fig. 10. Distribution of running cycles for subsets (FD001-FD004).
+S-score. The S-score is a specialized metric designed for predictive
+maintenance tasks where over-prediction and under-prediction of RUL
+have different consequences. It penalizes over-prediction more harshly
+because it can lead to catastrophic failures, while under-prediction,
+which leads to early maintenance, is less costly.
+𝑆=
+𝑛
+∑
+𝑖=1
+{
+exp(−Error𝑖
+13 ) − 1
+if Error𝑖≥0
+exp( −Error𝑖
+10
+) − 1
+if Error𝑖< 0
+(36)
+Where Error𝑖= RULpredicted,𝑖−RULtrue,𝑖.
+• Over-prediction (Error𝑖≥0): Overestimates of RUL are penal-
+ized more harshly, reflecting the critical risk of failures during
+operation.
+• Under-prediction (Error𝑖< 0): The under-prediction of the RUL
+is less severe. It may waste some of the RUL, leading to some
+economic loss.
+The S-score is a metric that balances these two predictions. That is,
+lower S-score means the model is more balanced to these predictions,
+minimizing both premature and late maintenance actions.
+Evaluation procedure. The main steps for applying the proposed ensem-
+ble model to the CMAPSS dataset are as follows:
+1. The ensemble model is trained using the training data contained
+within each of the subsets (FD001-FD004).
+2. The trained model is then applied to the test dataset to estimate
+the RUL for the engines.
+3. Finally, the values RULpredicted,𝑖and RULtrue,𝑖are substituted in
+Eqs. (35) and (36) to calculate RMSE and S-score, respectively.
+Now, the Table 3 summarizes the optimal hyperparameters for
+datasets FD001 to FD004.
+The Fig. 12 compares the true RUL and predicted RUL across subsets
+FD001 to FD004, highlighting prediction accuracy and error ranges.
+The Table 4 compares the RUL prediction performance across different
+‘‘state-of-the-arts’’ methods, highlighting the RMSE and S-score for each
+subset (FD001 to FD004).
+6.2. Sensitivity analysis of key parameters
+Analyzing the impact of hyperparameters on model performance is
+important to refine the ensemble model. For this, a sensitivity analysis
+was conducted on the C-MAPSS FD001 dataset, focusing on window
+size and learning rate. Using the proposed RLHT algorithm, we varied
+one parameter while fixing others, identifying hyperparameters that
+
+--- Page 16 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+16
+Faizanbasha A. and U. Rizwan
+Fig. 11. Degradation trajectories of multiple engines from FD001 dataset, highlighting nonlinear acceleration and nonstationary variance.
+Table 3
+Optimal hyperparameters used in the model configuration for different datasets.
+Hyperparameter
+Description
+Dataset
+FD001
+FD002
+FD003
+FD004
+Learning Rate
+Regulates the magnitude of the steps taken during gradient
+descent optimization.
+1.0852e−05
+5.7721e−04
+3.9337e−05
+4.1333e−04
+Batch Size
+Number of samples processed before the model is updated.
+64
+64
+64
+64
+Epochs
+Number of times the entire dataset is passed through the
+model.
+65
+121
+72
+114
+Dropout Rate
+Probability of dropping a neuron during training for
+regularization.
+0.4897
+0.2453
+0.2796
+0.4845
+Sequence Length
+Length of the input sequence for the model.
+30
+30
+30
+30
+Window Length
+Length of the window used for input data processing.
+30
+30
+30
+30
+Shift
+Number of time steps the window is shifted over the data.
+1
+1
+1
+1
+Early RUL
+Maximum RUL value assigned to engines.
+125
+125
+125
+125
+CNN Filters (1st Layer)
+The total filters used in the first convolutional layer.
+114
+109
+53
+119
+CNN Filters (2nd Layer)
+The total filters used in the second convolutional layer.
+155
+207
+191
+110
+CNN Filters (3rd Layer)
+The total filters used in the third convolutional layer.
+123
+69
+115
+75
+CNN Kernel Size
+Size of the convolutional kernel in each layer.
+3, 5, 5
+3, 3, 4
+6, 5, 4
+4, 5, 4
+CNN Pool Size
+Size of the window for max pooling.
+2
+2
+2
+2
+CNN Activation Function
+Activation function used in CNN layers.
+ReLU
+ReLU
+ReLU
+ReLU
+LSTM Units (1st Layer)
+The total units present in the first LSTM layer.
+100
+126
+100
+66
+LSTM Units (2nd Layer)
+The total units present in the second LSTM layer.
+105
+37
+70
+80
+LSTM Activation Function
+Activation function used in LSTM layers.
+ReLU
+ReLU
+ReLU
+ReLU
+Dense Layer Activation Function
+Activation function used in Dense layers.
+ReLU
+ReLU
+ReLU
+ReLU
+Output Layer Activation Function
+The activation function utilized in the output layer of the
+model.
+Linear
+Linear
+Linear
+Linear
+Optimizer
+Algorithm used for updating the weights.
+Adam
+Adam
+Adam
+Adam
+L2 Regularization
+Regularization applied to the kernel weights matrix.
+9.1007e−06
+2.7217e−06
+1.3918e−05
+1.9915e−06
+Early Stopping Patience
+The count of epochs without enhancement after which
+training process is stopped.
+10
+10
+10
+10
+Reduce LR Patience
+The count of epochs without enhancement before reducing
+the learning rate.
+5
+5
+5
+5
+Reduce LR Factor
+Factor by which the learning rate is reduced.
+0.5
+0.5
+0.5
+0.5
+Minimum Learning Rate
+Minimum value to which the learning rate can be reduced.
+1e−6
+1e−6
+1e−6
+1e-6
+minimize RMSE and S-score.
+1. Window size for data segmentation. The window size 𝑤represents
+the ‘‘number of past time steps’’ used for prediction. We tested window
+sizes 𝑤∈ {20, 30, 50, 100} and their effects on RMSE and S-score. A
+window size of 𝑤= 30 achieved the lowest RMSE (10.67) and S-score
+(192.14), effectively capturing temporal patterns without excessive
+noise. Larger sizes, like 𝑤
+= 100, increased RMSE, while smaller
+sizes, such as 𝑤= 20, also degraded performance (RMSE: 11.95) due
+to missing critical patterns. Table 5 shows the sensitivity results for
+FD001.
+2. Learning rate. The learning rate 𝜂controls the step size during ‘‘gra-
+dient descent,’’ affecting convergence speed and accuracy. We tested
+learning rates 𝜂∈ {1 × 10−6, 1.0852 × 10−5, 1 × 10−4, 1 × 10−3} and mea-
+sured their effects on RMSE, S-score, and convergence time (epochs).
+The 
+optimal 
+learning 
+rate 
+from 
+the 
+RLHT 
+model 
+was
+𝜂= 1.0852 × 10−5, balancing accuracy and convergence speed.Table 6
+presents the sensitivity analysis for FD001.
+Using the RLHT model, we identified that a window size of 30
+and a learning rate of 1.0852 × 10−5 significantly improved accuracy
+(RMSE = 10.67) and balanced the S-score for the FD001 dataset. This
+tuning enhances the model’s precision and stability, ensuring reliable
+
+--- Page 17 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+17
+Faizanbasha A. and U. Rizwan
+Fig. 12. Comparison of true RUL and predicted RUL for subsets (FD001-FD004).
+Table 4
+Comparison of RUL prediction performance.
+Method
+FD001
+FD002
+FD003
+FD004
+RMSE
+S-score
+RMSE
+S-score
+RMSE
+S-score
+RMSE
+S-score
+VLSTM [54]
+15.23
+250.00
+22.87
+4532.00
+14.53
+1523.00
+26.11
+5627.00
+Bi-LSTM-ED [55]
+12.45
+220.07
+27.00
+3099.09
+17.48
+574.00
+23.49
+3022.00
+Bi-LSTM [56]
+13.65
+295.00
+23.18
+4130.00
+17.14
+317.00
+24.06
+5430.00
+DCNN [6]
+12.63
+411.42
+25.53
+5755.00
+13.10
+456.00
+23.34
+6300.00
+BiGRU-TSAM [19]
+12.56
+213.35
+18.94
+2246.13
+14.45
+232.86
+23.87
+3610.34
+AGCNN [57]
+12.42
+225.61
+19.38
+2412.00
+13.30
+397.29
+22.58
+3392.00
+BDL [58]
+12.19
+267.21
+18.49
+2007.81
+16.07
+409.99
+19.41
+2415.71
+IMSDSSN [21]
+12.14
+261.01
+17.40
+1775.15
+12.57
+322.49
+19.78
+2581.83
+SCTA-LSTM [22]
+12.10
+207.00
+17.40
+1775.00
+12.84
+248.00
+19.41
+3100.00
+CNN-Bi-LSTM-AM-BO [32]
+11.43
+201.26
+15.69
+1214.47
+11.28
+181.99
+18.35
+2627.11
+Transformer-based Method + DiffRUL [59]
+11.71
+199.29
+15.90
+1162.84
+11.77
+240.37
+18.43
+1627.37
+PVA-FFG Improved Transformer [29]
+11.36
+173.89
+13.24
+714.98
+11.80
+215.32
+15.16
+1049.53
+DS-STFN [60]
+10.92
+161.35
+13.77
+946.34
+10.01
+150.42
+15.53
+1079.91
+The Proposed Ensemble Model
+10.67
+157.14
+12.35
+1201.05
+10.32
+147.41
+14.71
+1031.86
+Table 5
+Sensitivity analysis for window size.
+Window size (𝑤)
+RMSE (FD001)
+S-score (FD001)
+20
+11.95
+215.78
+30
+10.67
+192.14
+50
+11.12
+198.76
+100
+12.21
+225.43
+predictions under various conditions.
+6.3. Ablation study
+We conducted an ablation study on our CNN-Transformer-LSTM-
+SSM ensemble model by systematically removing key modules to eval-
+uate performance. This study aimed to quantify the impact of the
+Transformer, LSTM, and SSM on accurately predicting RUL. The goal is
+to understand how each module contributes to the overall performance
+and to assess the trade-offs when certain components are excluded.
+Fig. 13 shows the Ablation Study Cases for the CNN-Transformer-
+LSTM-SSM model. Subfigures (Fig. 13(a)–(f)) display different configu-
+rations: (a) complete model, (b) without Transformer, (c) without SSM,
+(d) without Transformer and SSM, (e) without LSTM, and (f) without
+LSTM and SSM. These configurations illustrate performance changes
+when key components are removed. All configurations were evaluated
+on the ‘‘C-MAPSS dataset’’ using RMSE and S-score.
+In Table 7, we present the results of the performed ablation study,
+with key observations as follows:
+• Without Transformer: RMSE increased by 15.15% on average,
+with a 20.6% increase in FD002 and 10.8% in FD004. This high-
+lights the Transformer’s self-attention mechanism in capturing
+temporal dependencies.
+• Without SSM: RMSE increased by 7.9%, highest in FD003 (8.8%)
+and least in FD004 (2.7%). This shows the SSM’s role in stabiliz-
+ing performance and capturing nonlinear degradation.
+• Without Transformer and SSM: RMSE increased by 24.95%
+across datasets. Without these components, the model relies solely
+
+--- Page 18 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+18
+Faizanbasha A. and U. Rizwan
+Table 6
+Sensitivity analysis for learning rate.
+Learning rate (𝜂)
+RMSE (FD001)
+S-score (FD001)
+Convergence time (Epochs)
+1 × 10−6
+12.43
+205.34
+65
+1.0852 × 10−5
+10.67
+192.14
+50
+1 × 10−4
+11.82
+207.43
+40
+1 × 10−3
+14.98
+365.87
+20
+Fig. 13. Ablation study cases.
+Table 7
+Ablation study results: RMSE and S-score across different configurations.
+Model
+FD001
+FD002
+FD003
+FD004
+RMSE
+S-score
+RMSE
+S-score
+RMSE
+S-score
+RMSE
+S-score
+Full Model (CNN-Transformer-LSTM-SSM)
+10.67
+157.14
+12.35
+1201.05
+10.32
+147.41
+14.71
+1031.86
+Without Transformer
+12.10
+225.00
+14.89
+1805.42
+11.95
+210.23
+16.30
+1240.35
+Without SSM
+11.50
+194.65
+13.87
+1452.11
+11.23
+187.89
+15.10
+1123.52
+Without Transformer and SSM
+13.45
+290.35
+16.45
+2007.91
+12.50
+232.45
+17.58
+1350.84
+Without LSTM
+12.85
+210.87
+14.34
+1672.18
+11.56
+201.22
+15.79
+1182.79
+Without LSTM and SSM
+13.50
+275.45
+15.67
+1897.50
+12.13
+218.54
+16.90
+1312.67
+on the CNN-LSTM framework, neglecting critical temporal and
+stochastic information, leading to a substantial performance drop.
+• Without LSTM: RMSE increased by 14.0% on average, indicating
+the LSTM’s importance in modeling sequential dependencies and
+enhancing the model’s ability to predict the RUL. The absence of
+LSTM results in worse performance, particularly in FD004, where
+temporal patterns are most critical.
+• Without LSTM and SSM: RMSE increased by 21.5% on aver-
+age. The absence of both LSTM and SSM leads to the exclu-
+sion of both sequential temporal learning and nonlinear degrada-
+tion modeling, significantly deteriorating the model’s predictive
+capability.
+This ablation study shows the contribution of Transformer, LSTM, and
+SSM components in improving model performance and reducing the
+RMSE and S-score.
+6.4. Mission cycles: Analysis of complex multi-segment assignments under
+multiple scenarios
+We consider three increasingly complex missions = {𝑀1, 𝑀2,
+𝑀3}. Mission 𝑀1, 𝑀2, and 𝑀3 have 2, 3, and 5 segments, respectively.
+Here, 𝑀𝑗 ,𝓁denotes the 𝓁-th segment of mission 𝑀𝑗. Each segment
+has a time window, baseline RUL requirement, thrust or certification
+needs, and environmental conditions. We use four turbofan engines
+from the NASA C-MAPSS FD001 dataset (Engines #15, #27, #46, and
+#74), each with scenario-dependent RUL, HPC/HPT limits, certification
+status, and spare parts requirements. Additionally, three scenarios, 𝛺=
+{𝜔1, 𝜔2, 𝜔3}, represent nominal, dusty, and severe conditions.
+6.4.1. Missions and segments
+Table 8 details the missions and segments. Each segment specifies
+a time window, baseline RUL requirement 𝐷𝑗 ,𝓁, thrust requirements
+(normal/high-thrust), and certification or environmental notes. High-
+thrust segments and those operating under dusty or severe conditions
+(𝜔2, 𝜔3) require additional RUL and HPC/HPT consumption. Addition-
+ally, the N1 certification in the table ensures engines meet perfor-
+mance and safety standards for LPC operations, guaranteeing reliable
+
+--- Page 19 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+19
+Faizanbasha A. and U. Rizwan
+Table 8
+Missions and segments with baseline requirements.
+Mission segment
+Time window [𝑡start
+𝑗 ,𝓁, 𝑡end
+𝑗 ,𝓁]
+𝐷𝑗 ,𝓁(Cycles)
+Thrust requirement
+Notes
+𝑀1,1
+[0h, 2h]
+40
+High-Thrust
+Normal conditions
+𝑀1,2
+[2h, 5h]
+35
+Normal
+Requires N1 certification
+𝑀2,1
+[0h, 3h]
+25
+Normal
+Normal conditions
+𝑀2,2
+[3h, 6h]
+50
+High-Thrust
+Dusty in 𝜔2, severe in 𝜔3
+𝑀2,3
+[6h, 9h]
+30
+Normal
+Normal conditions
+𝑀3,1
+[0h, 1h]
+20
+Normal
+Normal conditions
+𝑀3,2
+[1h, 3h]
+45
+High-Thrust
+High wear rate
+𝑀3,3
+[3h, 6h]
+35
+Normal
+Dusty in 𝜔2, severe in 𝜔3
+𝑀3,4
+[6h, 8h]
+55
+High-Thrust
+N1 certification required
+𝑀3,5
+[8h, 10h]
+40
+Normal
+Normal conditions
+Table 9
+Engine RUL, certifications, and spare parts under scenarios.
+Engine ID
+RUL (𝜔1)
+RUL (𝜔2)
+RUL (𝜔3)
+L𝜔2
+𝑖∕L𝜔3
+𝑖
+N1 certified
+Spare parts 𝑠𝑖
+Engine #15
+85
+70
+60
+120/90
+Yes
+𝑠15 = 1
+Engine #27
+90
+65
+55
+100/80
+No
+𝑠27 = 1
+Engine #46
+80
+60
+50
+110/75
+Yes
+𝑠46 = 2
+Engine #74
+95
+72
+58
+95/70
+Yes
+𝑠74 = 1
+Table 10
+Dynamic failure thresholds for engines under different scenarios.
+Engine ID
+Mission(s)
+Initial
+threshold (𝜏0)
+Failure threshold (𝜁′) under three scenarios
+Rationale
+𝜔1 (𝛿= 0.0752)
+𝜔2 (𝛿= 0.0953)
+𝜔3 (𝛿= 0.1264)
+Engine #15
+𝑀1,1, 𝑀3,2
+90
+67
+61
+54
+Reflects dynamic degradation over 4h mission with
+mild to severe conditions.
+Engine #27
+𝑀2,1, 𝑀2,2, 𝑀2,3
+115
+58
+49
+37
+Accounts for 9h mission duration with moderate
+wear to accelerated degradation.
+Engine #46
+𝑀1,2, 𝑀3,3, 𝑀3,4
+135
+74
+63
+49
+High thresholds adjusted for 8h mission with
+stricter RUL requirements.
+Engine #74
+𝑀2,2
+55
+44
+41
+38
+Short 3h mission with rapid degradation across
+conditions.
+performance during high-thrust missions.
+6.4.2. Engines and scenario effects
+The Table 9 summarizes the details of four turbofan engines un-
+der nominal (𝜔1), dusty (𝜔2), and severe (𝜔3) conditions. Higher en-
+vironmental severity reduces RUL, reflecting faster degradation (see
+Fig. 14(a)). N1-certified engines reliably handle high-thrust segments.
+Spare parts (𝑠𝑖, e.g., 𝑠46
+= 2 indicates that Engine #46 has two
+spare parts available) and HPC/HPT limits are critical for maintenance
+feasibility and engine reassignment across mission segments.
+Engine failure threshold. The failure threshold (𝜁′) for each engine is
+established using industry reliability standards and empirical analysis
+of the NASA C-MAPSS FD001 dataset. Examining engines’ historical
+run-to-failure patterns and operational limits, we identify critical RUL
+values indicating the minimum remaining cycles to safely complete
+assigned segments. When an engine’s predicted RUL falls below 𝜁′, it
+is deemed unsafe to continue. Thus, 𝜁′ guides maintenance scheduling,
+mission abort decisions, and engine re-engagement strategies, ensur-
+ing alignment with safety constraints and maintenance protocols. The
+specific failure thresholds for each engine are detailed in Table 10.
+The initial threshold (𝜏0) is the sum of the cumulative RUL of
+assigned mission segments and a safety margin, accounting for uncer-
+tainties, wear, and unforeseen stress. For instance, for Engine #15’s
+missions (𝑀1,1, 𝑀3,2), we calculate a combined RUL of 85 cycles and,
+adding a safety margin of 5 cycles, the initial threshold becomes 90
+cycles.
+This threshold is dynamically adjusted using degradation rate (𝛿)
+based on environmental conditions. From empirical testing, historical
+data, dust levels, temperature extremes, and operational loads, we set
+𝛿= 0.0752 for nominal (𝜔1), 𝛿= 0.0953 for dusty (𝜔2), and 𝛿= 0.1264
+for severe (𝜔3). Using 𝜏𝑡= 𝜏0 ⋅exp(−𝛿 𝑡), where 𝑡is mission duration,
+we compute failure thresholds (𝜁′) dynamically. For instance, Engine
+#27’s thresholds are 58, 49, and 37 cycles under 𝜔1, 𝜔2, and 𝜔3.
+Optimal engine-to-segment assignments. We implement a two-stage
+stochastic optimization model using a Mixed-Integer Linear Program-
+ming (MILP) solver to minimize expected costs across scenarios. The
+objective (Eq. (14)) includes maintenance, fuel, and failure penalties,
+with constraints (Eq. (15) to Eq. (20)) ensuring feasibility. Binary
+variables 𝑥𝑖,𝑗 ,𝓁assign engines to segments, and continuous variables
+𝑦𝜔
+𝑗capture scenario-specific outcomes. RUL updates dynamically, mod-
+eling degradation under varying conditions. Certification and resource
+constraints ensure feasible scheduling. Scenario probabilities P(𝜔) en-
+sure robust solutions. The optimization results, presented in Fig. 14(b),
+showing optimal engine assignments to mission segments.
+6.4.3. Scenario increments for high-thrust and harsh conditions
+Scenario increments for high-thrust segments are summarized in
+Table 11. Under 𝜔1, no increments apply. Under 𝜔2, each high-thrust
+segment adds +5 RUL cycles and consumes an additional 10 HPC/HPT
+cycles. Under 𝜔3, these increments are doubled, and maintenance
+resources are limited.
+Scheduled maintenance actions. Table 12 highlights maintenance
+scheduling actions under varying conditions, derived using the schedul-
+ing algorithm (Algorithm 4).
+6.4.4. Cost analysis
+The optimization framework aims to minimize the expected total
+cost, expressed in currency units, which includes maintenance, fuel
+consumption, and failure penalties. Table 13 provides a detailed cost
+breakdown across different scenarios.
+As scenarios intensify to 𝜔3, both maintenance and failure penalties
+escalate, underscoring increased operational challenges. The optimiza-
+tion effectively prioritizes maintenance resources to mitigate these
+costs, ensuring mission-critical segments remain operational. For ex-
+ample, Engine #15 is consistently maintained after 𝑀1,1 across all
+scenarios, preserving its RUL for high-thrust operations.
+
+--- Page 20 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+20
+Faizanbasha A. and U. Rizwan
+Fig. 14. Heatmaps for RUL of four engines across three scenarios and optimal engine-to-mission assignments.
+Table 11
+Scenario increments for high-thrust and harsh conditions.
+Scenario
+Additional RUL
+HPC/HPT per High-Thrust
+Maintenance constraints
+𝜔1
++0 cycles
++0 HPC/HPT
+Full crew/spares
+𝜔2
++5 cycles
++10 HPC/HPT
+Normal crew/spares
+𝜔3
++10 cycles
++15 HPC/HPT
+Half crew, delayed spares
+Table 12
+Scheduled maintenance actions by scenario.
+Engine ID
+Maint. under 𝜔1∕𝜔2
+Maint. under 𝜔3
+Notes
+E#15
+Yes, after 𝑀1,1
+Yes, earlier for 𝑀3,2
+Ensures RUL for high-thrust segments
+E#27
+No or minimal
+Maybe partial if 𝑀3 reduced
+Handles normal wear segments
+E#46
+Yes before 𝑀1,2
+Challenging under 𝜔3
+Critical for 𝑀3,4
+E#74
+Possibly after 𝑀2,2
+Difficult under 𝜔3
+Adjusts to spares availability
+Table 13
+Cost breakdown by scenario.
+Scenario
+Maintenance cost
+Fuel cost
+Failure penalty
+Total cost
+𝜔1
+10,000
+50,000
+5,000
+65,000
+𝜔2
+12,000
+55,000
+4,000
+71,000
+𝜔3
+15,000
+60,000
+10,000
+85,000
+6.5. Dynamic mission abort policy: A real-time strategy for preventing
+failures
+The key objective of the dynamic mission abort policy compared
+to static abort policy is that it uses real-time RUL predictions to abort
+missions when necessary. It helps in terminating catastrophic in-flight
+engine failures during missions.
+6.5.1. Decision rule for abort policy
+If the predicted RUL of an engine is less than the remaining cycles
+required for the current and upcoming mission segments, aborting
+the mission is optimal. Consider mission 𝑀2, which consists of three
+segments (𝑀2,1, 𝑀2,2, 𝑀2,3) requiring a total of 25 + 50 + 30 = 105 cycles.
+After 40 cycles, suppose mission 𝑀2 completed 𝑀2,1 (25 cycles) and
+partially progressed 15 cycles into 𝑀2,2, leaving 35 cycles of 𝑀2,2 plus
+all 30 cycles of 𝑀2,3. Thus, 65 cycles remain for mission completion.
+𝐴(𝑡) =
+{
+1
+if RUL(𝑡) < 𝑇rem
+0
+otherwise
+For example, let Engine #27 (with a current predicted RUL of 30 cycles)
+be operating on mission 𝑀2 at 𝑡= 40 cycles. Since 65 cycles are
+still needed to complete the remaining segments (𝑀2,2 and 𝑀2,3), and
+30 < 65, aborting the mission prevents potential engine failure.
+The Table 14 details the predicted RUL, remaining mission segment
+cycles, shifting and aborting costs, and total expected costs (calculated
+using Eq. (29)) for each mission decision point. The analysis reveals
+that aborting missions dynamically when the RUL is insufficient re-
+sults in a significantly lower total expected cost (15,000) compared to
+continuing the mission (32,500).
+6.6. Post-mission abort analysis and maintenance: Optimizing post-abortion
+recovery
+After aborting Engine #27 from mission 𝑀2, immediate main-
+tenance can restore engine health. Let 𝜁re be the threshold for re-
+engagement. If maint(𝑡) ≥𝜁re, the engine is ready to resume operations
+on subsequent mission segments.
+Re-engage(𝑡) =
+{
+1
+if maint(𝑡) ≥𝜁re
+0
+otherwise
+6.6.1. Mission shifting and re-engagement: Ensuring continuity after abor-
+tions
+If a mission aborts mid-segment, shifting the remaining segments to
+another engine with adequate RUL can prevent mission failure costs.
+
+--- Page 21 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+21
+Faizanbasha A. and U. Rizwan
+Table 14
+Dynamic mission abort policy with integrated cost analysis.
+Time (Cycles)
+Predicted RUL (Cycles)
+Remaining segment cycles
+Abort decision
+𝐶transfer
+𝐶abort
+𝐶total
+40
+30
+65
+Abort
+10,000
+5,000
+15,000
+50
+40
+55
+Continue
+–
+–
+32,500
+60
+35
+45
+Continue
+–
+–
+32,500
+70
+20
+35
+Abort
+10,000
+5,000
+15,000
+80
+45
+25
+Continue
+–
+–
+32,500
+90
+25
+15
+Continue
+–
+–
+32,500
+Table 15
+Remaining engines for re-engagement and their RULs.
+Engine ID
+Predicted RUL (Cycles)
+Engine #15
+85
+Engine #46
+80
+Engine #74
+95
+Strategy for mission shifting. Let 𝑇rem(𝑀𝑗) be the cycles needed to
+complete the remaining segments of mission 𝑀𝑗. Another engine 𝐸𝑖
+can take over if RUL𝑖≥𝑇rem(𝑀𝑗).
+𝐸𝑖= ar g max
+𝑖
+(RUL𝑖subject to RUL𝑖≥𝑇rem(𝑀𝑗)) .
+Shifting missions after abortions. Assume Engine #27 aborts mission 𝑀2
+after 40 cycles, leaving 65 cycles of segments remaining. The Table 15
+lists the available engines for re-engagement and their predicted RULs.
+Engine #74, with 95 RUL cycles, is chosen to complete the remain-
+ing mission segments (65 cycles required), ensuring mission continuity.
+For Engine #74 re-engaging, assume a scheduled maintenance cost of
+2,200 and an additional fuel cost of 1,600, totaling:
+𝐶re = 2, 200 + 1, 600 = 3, 800.
+By selecting engines with sufficient RUL and managing re-engagement
+costs, the overall strategy remains cost-effective, ensuring successful
+completion of mission segments despite aborts.
+Maintenance and re-engagement of engine #27. Setting 𝜁re
+= 0.80,
+Table 16 shows that after 20 maintenance cycles, Engine #27’s health
+recovers to 0.85, allowing it to re-engage in mission segments if cost-
+effective. Further, the costs are derived using Eqs. (30) and (32). At
+lower maintenance cycles (e.g., 10 or 15), no re-engagement occurs,
+prompting mission shifting and thus higher 𝐶total. As maintenance
+cycles increase and re-engagement becomes feasible, shifting costs are
+avoided, reducing the overall 𝐶total.
+The implementation of dynamic mission abort policies, driven by
+real-time RUL predictions, significantly enhances operational reliabil-
+ity and safety. By proactively aborting missions when engine health
+is compromised, the strategy prevents catastrophic failures, ensuring
+mission success and safeguarding critical assets.
+Collectively, these experimental results validate the proposed SSM-
+based ensemble deep learning model’s effectiveness in accurately pre-
+dicting RUL across varied and complex operational scenarios. The
+reinforcement learning-based hyperparameter tuning enhances model
+performance and stability, while dynamic mission abort policies and
+mission shifting strategies demonstrate practical applications of RUL
+predictions in optimizing operational reliability and reducing mainte-
+nance costs. Additionally, the ensemble model effectively informs mis-
+sion optimization and maintenance strategies, enhancing operational
+efficiency, reducing costs, and ensuring higher reliability in predictive
+maintenance applications. Together, these interconnected innovations
+highlight the potential of our integrated approach to advance predictive
+maintenance practices in mission-critical systems, offering substantial
+advancements to the field of prognostics and health management.
+7. Conclusion
+In this study, we introduced a hybrid ensemble model that combines
+CNNs, Transformers, LSTMs, and a Smooth Semi-Martingale (SSM)
+stochastic layer to improve the prediction of Remaining Useful Life
+(RUL) in industrial equipment. By modeling both deterministic and
+stochastic degradation processes, our approach addresses challenges
+posed by nonlinear, nonstationary, and stochastic failures in complex
+systems. We further enhanced the model’s performance and reduced
+training time by introducing a new Reinforcement Learning-Based Hy-
+perparameter Tuning (RLHT) method, which adapts to the training
+process in real-time. Moreover, based on the proposed ensemble model
+a new predictive maintenance scheduling algorithm has been devel-
+oped which integrates our model’s outputs into maintenance decision-
+making processes. This algorithm schedules optimal maintenance by
+considering factors such as maintenance costs, failure risks, and op-
+erational thresholds, thereby enhancing operational continuity, safety,
+and cost-effectiveness. Additionally, we introduced a framework for
+optimizing multi-segment mission cycle assignments and resource man-
+agement, integrating RUL predictions into multi-stage optimization
+for dynamic engine allocation, mission adjustments, and maintenance
+scheduling to minimize costs and mitigate failure risks under com-
+plex constraints. We also developed a dynamic mission abort policy
+informed by the predicted RUL, enabling real-time decision-making in
+mission-critical operations through strategies like mission shifting, re-
+engagement, and post-abortion analysis, which are crucial for ensuring
+operational continuity, safety, and cost-effectiveness. Validation on the
+NASA C-MAPSS dataset demonstrates that our proposed model per-
+forms better compared to existing state-of-the-art methods, achieving
+lower RMSE and S-score values across all subsets (FD001–FD004), with
+RMSE values of 10.67, 12.35, 10.32, and 14.71, respectively. Sensitivity
+analyses and ablation studies confirm the stability and effectiveness
+of the proposed framework, highlighting the critical role of important
+components within the ensemble. By effectively capturing complex
+degradation patterns through deep learning and stochastic modeling,
+the proposed model provides more accurate and reliable RUL predic-
+tions. The integration of dynamic decision-making policies enhances
+its utility in mission-critical applications, potentially contributing to
+increased safety, reduced operational costs, and improved efficiency in
+industrial operations.
+Despite the promising results, the integration of multiple deep
+learning architectures and the SSM layer increases computational com-
+plexity, which may limit real-time deployment in resource-constrained
+settings. Future work should focus on optimizing the model to reduce
+computational overhead without compromising accuracy. Expanding
+the framework to accommodate multi-component systems and explor-
+ing alternative stochastic modeling techniques could enhance its ap-
+plicability and robustness. Implementing the dynamic mission abort
+policy in real-world industrial environments would provide valuable
+insights for refining the strategy and assessing its impact on operational
+decision-making.
+CRediT authorship contribution statement
+Faizanbasha A.: Writing – review & editing, Writing – origi-
+nal draft, Visualization, Software, Methodology, Investigation, For-
+mal analysis, Data curation, Conceptualization. U. Rizwan: Writing
+– review & editing, Visualization, Validation, Supervision, Resources,
+Methodology, Data curation.
+
+--- Page 22 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+22
+Faizanbasha A. and U. Rizwan
+Table 16
+Post-abortion maintenance, re-engagement, and cost analysis for engine #27 (𝜁re = 0.80).
+Time after abort (Cycles)
+Engine state maint(𝑡)
+Re-engagement decision
+𝐶re
+𝐶total
+10
+0.75
+No
+2,000
+8,800
+15
+0.78
+No
+2,150
+8,950
+20
+0.85
+Yes
+2,200
+5,200
+25
+0.90
+Yes
+2,350
+5,350
+Funding
+This research was funded by ‘‘University Grants Commission, Ba-
+hadurshah Zafar Marg, New Delhi’’ under the scheme of CSIR-UGC JRF
+with ref no: 211610000578. The first author thanks ‘‘Department of
+Higher Education, Ministry of Education, Govt. of India’’ for the financial
+assistance received during this research work.
+Declaration of competing interest
+The authors declare that they have no known competing finan-
+cial interests or personal relationships that could have appeared to
+influence the work reported in this paper.
+Acknowledgment
+The authors express their sincere gratitude to the reviewers and
+editors for their time and consideration in evaluating this manuscript,
+contributing to the advancement of scholarly knowledge in this field.
+Data availability
+Data will be made available on request.
+References
+[1] Zio E. Prognostics and health management (PHM): Where are we and where do
+we (need to) go in theory and practice. Reliab Eng Syst Saf 2022;218:108119.
+http://dx.doi.org/10.1016/j.ress.2021.108119.
+[2] Wu F, Wu Q, Tan Y, Xu X. Remaining useful life prediction based on
+deep learning: A survey. Sensors 2024;24:3454. http://dx.doi.org/10.3390/
+s24113454.
+[3] Taşcı B, Omar A, Ayvaz S. Remaining useful lifetime prediction for predictive
+maintenance in manufacturing. Comput Ind Eng 2023;184:109566. http://dx.doi.
+org/10.1016/j.cie.2023.109566.
+[4] Zhan Y, Kong Z, Wang Z, Jin X, Xu Z. Remaining useful life prediction with
+uncertainty quantification based on multi-distribution fusion structure. Reliab
+Eng Syst Saf 2024;251:110383. http://dx.doi.org/10.1016/j.ress.2024.110383.
+[5] Zhang Q, Liu Q, Ye Q. An attention-based temporal convolutional network
+method for predicting remaining useful life of aero-engine. Eng Appl Artif Intell
+2024;127:107241. http://dx.doi.org/10.1016/j.engappai.2023.107241.
+[6] Li X, Ding Q, Sun J-Q. Remaining useful life estimation in prognostics using
+deep convolution neural networks. Reliab Eng Syst Saf 2018;172:1–11. http:
+//dx.doi.org/10.1016/j.ress.2017.11.021.
+[7] Ferreira C, Gonçalves G. Remaining useful life prediction and challenges: A
+literature review on the use of machine learning methods. J Manuf Syst
+2022;63:550–62. http://dx.doi.org/10.1016/j.jmsy.2022.05.010.
+[8] Faizanbasha A, Rizwan U. Optimal age replacement time for coherent systems
+under geometric point process. Comput Ind Eng 2024;190:110047. http://dx.doi.
+org/10.1016/j.cie.2024.110047.
+[9] Faizanbasha A, Rizwan U. Optimizing replacement times and total expected
+discounted costs in coherent systems using geometric point process. Comput Ind
+Eng 2025;201:110879. http://dx.doi.org/10.1016/j.cie.2025.110879.
+[10] Faizanbasha A, Rizwan U. Optimizing burn-in and predictive maintenance for en-
+hanced reliability in manufacturing systems: A two-unit series system approach.
+J Manuf Syst 2025;78:244–70. http://dx.doi.org/10.1016/j.jmsy.2024.12.002.
+[11] Lee J, Mitici M. Deep reinforcement learning for predictive aircraft mainte-
+nance using probabilistic remaining-useful-life prognostics. Reliab Eng Syst Saf
+2023;230:108908. http://dx.doi.org/10.1016/j.ress.2022.108908.
+[12] Ochella S, Shafiee M, Dinmohammadi F. Artificial intelligence in prognos-
+tics and health management of engineering systems. Eng Appl Artif Intell
+2022;108:104552. http://dx.doi.org/10.1016/j.engappai.2021.104552.
+[13] Wen P, Li Y, Chen S, Zhao S. Remaining useful life prediction of IIoT-enabled
+complex industrial systems with hybrid fusion of multiple information sources.
+IEEE Internet Things J 2021;8(11):9045–58. http://dx.doi.org/10.1109/JIOT.
+2021.3055977.
+[14] Nguyen KT, Medjaher K. A new dynamic predictive maintenance framework
+using deep learning for failure prognostics. Reliab Eng Syst Saf 2019;188:251–62.
+http://dx.doi.org/10.1016/j.ress.2019.03.018.
+[15] Mitici M, de Pater I, Barros A, Zeng Z. Dynamic predictive maintenance for
+multiple components using data-driven probabilistic RUL prognostics: The case
+of turbofan engines. Reliab Eng Syst Saf 2023;234:109199. http://dx.doi.org/10.
+1016/j.ress.2023.109199.
+[16] Zeng J, Liang Z. A dynamic predictive maintenance approach using probabilistic
+deep learning for a fleet of multi-component systems. Reliab Eng Syst Saf
+2023;238:109456. http://dx.doi.org/10.1016/j.ress.2023.109456.
+[17] Song Y, Gao S, Li Y, Jia L, Li Q, Pang F. Distributed attention-based temporal
+convolutional network for remaining useful life prediction. IEEE Internet Things
+J 2021;8(12):9594–602. http://dx.doi.org/10.1109/JIOT.2020.3004452.
+[18] Xiang S, Qin Y, Luo J, Pu H, Tang B. Multicellular LSTM-based deep learning
+model for aero-engine remaining useful life prediction. Reliab Eng Syst Saf
+2021;216:107927. http://dx.doi.org/10.1016/j.ress.2021.107927.
+[19] Zhang J, Jiang Y, Wu S, Li X, Luo H, Yin S. Prediction of remaining useful
+life based on bidirectional gated recurrent unit with temporal self-attention
+mechanism. Reliab Eng Syst Saf 2022;221:108297. http://dx.doi.org/10.1016/
+j.ress.2021.108297.
+[20] Yang L, Liao Y, Duan R, Kang T, Xue J. A bidirectional recursive gated dual atten-
+tion unit based RUL prediction approach. Eng Appl Artif Intell 2023;120:105885.
+http://dx.doi.org/10.1016/j.engappai.2023.105885.
+[21] Zhang J, Li X, Tian J, Luo H, Yin S. An integrated multi-head dual sparse
+self-attention network for remaining useful life prediction. Reliab Eng Syst Saf
+2023;233:109096. http://dx.doi.org/10.1016/j.ress.2023.109096.
+[22] Tian H, Yang L, Ju B. Spatial correlation and temporal attention-based
+LSTM for remaining useful life prediction of turbofan engine. Measurement
+2023;214:112816. http://dx.doi.org/10.1016/j.measurement.2023.112816.
+[23] Zhang Z, Song W, Li Q. Dual-aspect self-attention based on transformer for
+remaining useful life prediction. IEEE Trans Instrum Meas 2022;71:1–11. http:
+//dx.doi.org/10.1109/TIM.2022.3160561.
+[24] Wang Y, Deng L, Zheng L, Gao RX. Temporal convolutional network with soft
+thresholding and attention mechanism for machinery prognostics. J Manuf Syst
+2021;60:512–26. http://dx.doi.org/10.1016/j.jmsy.2021.07.008.
+[25] Fu S, Lin L, Wang Y, Guo F, Zhao M, Zhong B, Zhong S. MCA-DTCN: A novel
+dual-task temporal convolutional network with multi-channel attention for first
+prediction time detection and remaining useful life prediction. Reliab Eng Syst
+Saf 2024;241:109696. http://dx.doi.org/10.1016/j.ress.2023.109696.
+[26] Zhang Y, Su C, Wu J, Liu H, Xie M. Trend-augmented and temporal-featured
+transformer network with multi-sensor signals for remaining useful life pre-
+diction. Reliab Eng Syst Saf 2024;241:109662. http://dx.doi.org/10.1016/j.ress.
+2023.109662.
+[27] Xiang F, Zhang Y, Zhang S, Wang Z, Qiu L, Choi JH. Bayesian gated-transformer
+model for risk-aware prediction of aero-engine remaining useful life. Expert Syst
+Appl 2024;238:121859. http://dx.doi.org/10.1016/j.eswa.2023.121859.
+[28] Liu L, Song X, Zhou Z. Aircraft engine remaining useful life estimation
+via a double attention-based data-driven architecture. Reliab Eng Syst Saf
+2022;221:108330. http://dx.doi.org/10.1016/j.ress.2022.108330.
+[29] Zhou Z, Long Z, Wang R, Bai M, Liu J, Yu D. An aircraft engine remaining
+useful life prediction method based on predictive vector angle minimization and
+feature fusion gate improved transformer model. J Manuf Syst 2024;76:567–84.
+http://dx.doi.org/10.1016/j.jmsy.2024.08.025.
+[30] Chen C, Zhu ZH, Shi J, Lu N, Jiang B. Dynamic predictive maintenance schedul-
+ing using deep learning ensemble for system health prognostics. IEEE Sensors J
+2021;21(23):26878–91. http://dx.doi.org/10.1109/JSEN.2021.3119553.
+[31] Wang L, Zhu Z, Zhao X. Dynamic predictive maintenance strategy for system
+remaining useful life prediction via deep learning ensemble method. Reliab Eng
+Syst Saf 2024;245:110012. http://dx.doi.org/10.1016/j.ress.2024.110012.
+[32] Wang L, Chen Y, Zhao X, Xiang J. Predictive maintenance scheduling for
+aircraft engines based on remaining useful life prediction. IEEE Internet Things
+J 2024;11(13):23020–31. http://dx.doi.org/10.1109/JIOT.2024.3376715.
+[33] Lu B, Chen Z, Zhao X. Data-driven dynamic predictive maintenance for a
+manufacturing system with quality deterioration and online sensors. Reliab Eng
+Syst Saf 2021;212:107628. http://dx.doi.org/10.1016/j.ress.2021.107628.
+
+--- Page 23 ---
+Reliability Engineering and System Safety 259 (2025) 110919
+23
+Faizanbasha A. and U. Rizwan
+[34] Shoorkand HD, Nourelfath M, Hajji A. A hybrid CNN-LSTM model for joint op-
+timization of production and imperfect predictive maintenance planning. Reliab
+Eng Syst Saf 2024;241:109707. http://dx.doi.org/10.1016/j.ress.2023.109707.
+[35] Meng H, Geng M, Han T. Long short-term memory network with Bayesian
+optimization for health prognostics of lithium-ion batteries based on partial
+incremental capacity analysis. Reliab Eng Syst Saf 2023;236:109288. http://dx.
+doi.org/10.1016/j.ress.2023.109288.
+[36] Wang L, Li B, Zhao X. Multi-objective predictive maintenance scheduling models
+integrating remaining useful life prediction and maintenance decisions. Comput
+Ind Eng 2024;197:110581. http://dx.doi.org/10.1016/j.cie.2024.110581.
+[37] Shi J, Zhong J, Zhang Y, Xiao B, Xiao L, Zheng Y. A dual attention LSTM
+lightweight model based on exponential smoothing for remaining useful life
+prediction. Reliab Eng Syst Saf 2024;243:109821. http://dx.doi.org/10.1016/j.
+ress.2023.109821.
+[38] Chen J, Gao H, Fang C. Optimal two-stage abort policy considering performance-
+based missions. Reliab Eng Syst Saf 2025;257:110803. http://dx.doi.org/10.
+1016/j.ress.2025.110803.
+[39] Cheng G, Shen J, Wang F, Li L, Yang N. Optimal mission abort policy for a multi-
+component system with failure interaction. Reliab Eng Syst Saf 2024;242:109791.
+http://dx.doi.org/10.1016/j.ress.2023.109791.
+[40] Zhao X, Li R, Cao S, Qiu Q. Joint modeling of loading and mission abort
+policies for systems operating in dynamic environments. Reliab Eng Syst Saf
+2023;230:108948. http://dx.doi.org/10.1016/j.ress.2022.108948.
+[41] Meng S, Xing L, Levitin G. Optimizing component activation and operation
+aborting in missions with consecutive attempts and common abort command.
+Reliab Eng Syst Saf 2024;243:109842. http://dx.doi.org/10.1016/j.ress.2023.
+109842.
+[42] Levitin G, Xing L, Dai Y. Optimizing time-varying performance and mis-
+sion aborting policy in resource constrained missions. Reliab Eng Syst Saf
+2024;245:110011. http://dx.doi.org/10.1016/j.ress.2024.110011.
+[43] Levitin G, Xing L, Dai Y. A new self-adaptive mission aborting policy for
+systems operating in uncertain random shock environment. Reliab Eng Syst Saf
+2024;248:110184. http://dx.doi.org/10.1016/j.ress.2024.110184.
+[44] Fang C, Chen J, Qiu D. Reliability modeling for balanced systems considering
+mission abort policies. Reliab Eng Syst Saf 2024;243:109853. http://dx.doi.org/
+10.1016/j.ress.2023.109853.
+[45] Zhao X, Liu H, Wu Y, Qiu Q. Joint optimization of mission abort and system
+structure considering dynamic tasks. Reliab Eng Syst Saf 2023;234:109128.
+http://dx.doi.org/10.1016/j.ress.2023.109128.
+[46] Qiu Q, Maillart LM, Prokopyev OA, Cui L. Optimal condition-based mission abort
+decisions. IEEE Trans Reliab 2023;72(1):408–25. http://dx.doi.org/10.1109/TR.
+2022.3172377.
+[47] Pan J, Sun B, Wu Z, Yi Z, Feng Q, Ren Y, Wang Z. Probabilistic remaining
+useful life prediction without lifetime labels: A Bayesian deep learning and
+stochastic process fusion method. Reliab Eng Syst Saf 2024;250:110313. http:
+//dx.doi.org/10.1016/j.ress.2024.110313.
+[48] Lin YH, Ding ZQ, Li YF. Similarity based remaining useful life prediction based
+on Gaussian process with active learning. Reliab Eng Syst Saf 2023;238:109461.
+http://dx.doi.org/10.1016/j.ress.2023.109461.
+[49] Saxena A, Goebel K, Simon D, Eklund N. Damage propagation modeling for
+aircraft engine run-to-failure simulation. 2008 Int Conf Progn Heal Manag
+2008;1–9. http://dx.doi.org/10.1109/PHM.2008.4711414.
+[50] Qiu Q, Cui L, Wu B. Dynamic mission abort policy for systems operating in
+a controllable environment with self-healing mechanism. Reliab Eng Syst Saf
+2020;203:107069. http://dx.doi.org/10.1016/j.ress.2020.107069.
+[51] Liu L, Yang J. A dynamic mission abort policy for the swarm executing missions
+and its solution method by tailored deep reinforcement learning. Reliab Eng Syst
+Saf 2023;234:109149. http://dx.doi.org/10.1016/j.ress.2023.109149.
+[52] Liu L, Yang J, Yan B. A dynamic mission abort policy for transportation systems
+with stochastic dependence by deep reinforcement learning. Reliab Eng Syst Saf
+2024;241:109682. http://dx.doi.org/10.1016/j.ress.2023.109682.
+[53] Sobhi JS. Jet engine turbofan design modelling CATIA V5. 2021, Available from:
+https://grabcad.com/library/jet-engine-turbofan-design-modelling-catia-v5-1.
+[54] ElDali M, Kumar KD. Fault diagnosis and prognosis of aerospace systems using
+growing recurrent neural networks and LSTM. In: 2021 IEEE Aerospace Con-
+ference (50100). 2021, p. 1–20. http://dx.doi.org/10.1109/AERO50100.2021.
+9438432.
+[55] Yu W, Kim IY, Mechefske C. Remaining useful life estimation using a bidirec-
+tional recurrent neural network based autoencoder scheme. Mech Syst Signal
+Process 2019;129:764–80. http://dx.doi.org/10.1016/j.ymssp.2019.05.005.
+[56] Wang J, Wen G, Yang S, Liu Y. Remaining useful life estimation in prognostics
+using deep bidirectional LSTM neural network. In: 2018 Prognostics and System
+Health Management Conference. 2018, p. 1037–42. http://dx.doi.org/10.1109/
+PHM-Chongqing.2018.00184.
+[57] Liu H, Liu Z, Jia W, Lin X. Remaining useful life prediction using a
+novel feature-attention-based end-to-end approach. IEEE Trans Ind Informatics
+2021;17(2):1197–207. http://dx.doi.org/10.1109/TII.2020.2983760.
+[58] Kim M, Liu K. A Bayesian deep learning framework for interval estimation
+of remaining useful life in complex systems by incorporating general degrada-
+tion characteristics. IISE Trans 2021;53(3):326–40. http://dx.doi.org/10.1080/
+24725854.2020.1766729.
+[59] Wang W, Song H, Si S, Lu W, Cai Z. Data augmentation based on diffusion
+probabilistic model for remaining useful life estimation of aero-engines. Reliab
+Eng Syst Saf 2024;252:110394. http://dx.doi.org/10.1016/j.ress.2024.110394.
+[60] Zhang Q, Yang P, Liu Q. A dual-stream spatio-temporal fusion network
+with multi-sensor signals for remaining useful life prediction. J Manuf Syst
+2024;76:43–58. http://dx.doi.org/10.1016/j.jmsy.2024.07.004.
